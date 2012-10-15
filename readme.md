@@ -11,7 +11,7 @@ This module is to be used with an emoncms installed on the PI to interface with 
 
 ##Requires the pecl php serial module
 
-sudo apt-get install php-pear php5-dev
-sudo pecl install channel://pecl.php.net/dio-0.0.6
-Add "extension=dio.so" to php.ini
-Restart apache
+- sudo apt-get install php-pear php5-dev
+- sudo pecl install channel://pecl.php.net/dio-0.0.6
+- Add "extension=dio.so" to php.ini
+- Restart apache
