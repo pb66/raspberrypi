@@ -8,7 +8,7 @@
   Emoncms - open source energy visualisation
   Part of the OpenEnergyMonitor project:
   http://openenergymonitor.org
- 
+
   */
 
   define('EMONCMS_EXEC', 1);
@@ -16,7 +16,9 @@
   $fp = fopen("importlock", "w");
   if (! flock($fp, LOCK_EX | LOCK_NB)) { echo "Already running\n"; die; }
 
-  require("../../settings.php");
+  chdir(dirname(__FILE__));
+
+  require "../../settings.php";
   include "../../db.php";
   db_connect();
 
@@ -28,15 +30,14 @@
   $group = $settings['sgroup'];
   $frequency = $settings['frequency'];
   $baseid = $settings['baseid'];
-  
 
   // Create a stream context that configures the serial port
   // And enables canonical input.
-  $c = stream_context_create(array('dio' => 
-    array('data_rate' => 9600, 
-          'data_bits' => 8, 
-          'stop_bits' => 1, 
-          'parity' => 0, 
+  $c = stream_context_create(array('dio' =>
+    array('data_rate' => 9600,
+          'data_bits' => 8,
+          'stop_bits' => 1,
+          'parity' => 0,
           'flow_control' => 0,
           'is_canonical' => 1)));
 
@@ -48,16 +49,16 @@
   } else {
     $filename = "dio.serial://dev/ttyAMA0";
   }
- 
+
   // Open the stream for read and write and use it.
   $f = fopen($filename, "r+", false, $c);
-  if ($f) 
+  if ($f)
   {
     //fprintf($f,"\r\n");
     sleep(1);
     fprintf($f,$baseid."i");
     sleep(1);
-    fprintf($f,$frequency."b"); 
+    fprintf($f,$frequency."b");
     sleep(1);
     fprintf($f,$group."g");
     sleep(1);
@@ -79,7 +80,6 @@
         raspberrypi_running();
       }
 
-
       $data = fgets($f);
       if ($data && $data!="\n")
       {
@@ -94,15 +94,38 @@
             $msubs .= $values[$i] + $values[$i+1]*256;
           }
           echo $msubs."\n";
-          $url = "http://127.0.0.1/emoncms/input/post?apikey=".$apikey."&node=".$values[1]."&csv=".$msubs;
-          $fh = @fopen($url, 'r' ); fclose($fh);
+          $url = "/emoncms/input/post?apikey=".$apikey."&node=".$values[1]."&csv=".$msubs;
+          getcontent("localhost",80,$url);
+
         }
       }
-
-      usleep(100);
 
     }
   }
   fclose($f);
 
+function getcontent($server, $port, $file)
+{
+   $cont = "";
+   $ip = gethostbyname($server);
+   $fp = fsockopen($ip, $port);
+   if (!$fp)
+   {
+       return "Unknown";
+   }
+   else
+   {
+       $com = "GET $file HTTP/1.1\r\nAccept: */*\r\nAccept-Language: de-ch\r\nAccept-Encoding: gzip, deflate\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)\r\nHost: $server:$port\r\nConnection: Keep-Alive\r\n\r\n";
+       fputs($fp, $com);
+/* Don't realy need to fetch output as it slows us down
+       while (!feof($fp))
+       {
+           $cont .= fread($fp, 500);
+       }
+*/
+       fclose($fp);
+//       $cont = substr($cont, strpos($cont, "\r\n\r\n") + 4);
+//       return $cont;
+   }
+}
 ?>
