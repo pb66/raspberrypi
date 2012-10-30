@@ -88,15 +88,17 @@
         if ($data[0]!=">")
         {
           $values = explode(' ',$data);
-          $msubs = "";
-          for($i=2; $i<(count($values)-1); $i+=2){
-            if ($i>2) $msubs .= ",";
-            $msubs .= $values[$i] + $values[$i+1]*256;
+          if ($values && is_numeric($values[1]))
+          {
+            $msubs = "";
+            for($i=2; $i<(count($values)-1); $i+=2){
+              if ($i>2) $msubs .= ",";
+              $msubs .= $values[$i] + $values[$i+1]*256;
+            }
+            echo $msubs."\n";
+            $url = "/emoncms/input/post?apikey=".$apikey."&node=".$values[1]."&csv=".$msubs;
+            getcontent("localhost",80,$url);
           }
-          echo $msubs."\n";
-          $url = "/emoncms/input/post?apikey=".$apikey."&node=".$values[1]."&csv=".$msubs;
-          getcontent("localhost",80,$url);
-
         }
       }
 
