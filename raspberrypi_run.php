@@ -93,7 +93,10 @@
             $msubs = "";
             for($i=2; $i<(count($values)-1); $i+=2){
               if ($i>2) $msubs .= ",";
-              $msubs .= $values[$i] + $values[$i+1]*256;
+              //$msubs .= $values[$i] + $values[$i+1]*256;
+              $int16 = $values[$i] + $values[$i+1]*256;
+              if ($int16>32768) $int16 = -65536 + $int16;
+              $msubs .= $int16;
             }
             echo $msubs."\n";
             $url = "/emoncms/input/post?apikey=".$apikey."&node=".$values[1]."&csv=".$msubs;
