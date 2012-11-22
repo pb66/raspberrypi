@@ -42,7 +42,7 @@
 
 <p>Domain name<br><input type="text" name="remotedomain" value="<?php echo $settings['remotedomain']; ?>" /></p>
 <p>Write apikey<br><input type="text" name="remoteapikey" value="<?php echo $settings['remoteapikey']; ?>" /></p>
-<?php if ($send_to_remote) echo "<p><b>Authentication successful</b></p>"; ?>
+<?php if ($sent_to_remote) echo "<p><b>Authentication successful</b></p>"; else echo "<p><b>Incorrect remote server details</b></p>"; ?>
 
 </form>
 </div>
