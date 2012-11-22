@@ -87,6 +87,12 @@
         if ($settings['frequency'] !=$frequency) {$frequency = $settings['frequency']; fprintf($f,$frequency."b"); }
         if ($settings['baseid'] !=$baseid) {$baseid = $settings['baseid']; fprintf($f,$baseid."i");}
 
+        if ($settings['remotedomain'] !=$remotedomain || $settings['remoteapikey'] !=$remoteapikey)
+        { 
+          $result = file_get_contents("http://".$remotedomain."/time/local.json?apikey=".$remoteapikey);
+          if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; 
+        }
+
         raspberrypi_running();
 
         // Forward data to remote emoncms

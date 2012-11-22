@@ -10,6 +10,11 @@
   http://openenergymonitor.org
  
   */
+
+  $sent_to_remote = false;
+  $result = file_get_contents("http://".$settings['remotedomain']."/time/local.json?apikey=".$settings['remoteapikey']);
+  if ($result[0]=='t') $sent_to_remote = true;
+
 ?>
 
 <h2>Raspberry PI</h2>
@@ -37,6 +42,7 @@
 
 <p>Domain name<br><input type="text" name="remotedomain" value="<?php echo $settings['remotedomain']; ?>" /></p>
 <p>Write apikey<br><input type="text" name="remoteapikey" value="<?php echo $settings['remoteapikey']; ?>" /></p>
+<?php if ($send_to_remote) echo "<p><b>Authentication successful</b></p>";
 
 </form>
 </div>
