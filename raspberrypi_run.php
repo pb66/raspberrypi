@@ -31,6 +31,13 @@
   $frequency = $settings['frequency'];
   $baseid = $settings['baseid'];
 
+  $remotedomain = $settings['remotedomain'];
+  $remoteapikey = $settings['remoteapikey'];
+
+  $sent_to_remote = false;
+  $result = file_get_contents("http://".$remotedomain."/time/local.json?apikey=".$remoteapikey);
+  if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
+
   // Create a stream context that configures the serial port
   // And enables canonical input.
   $c = stream_context_create(array('dio' =>
@@ -64,7 +71,9 @@
     sleep(1);
 
     $start = time();
-    $remotedata = "[";
+    $ni = 0; $remotedata = "[";
+    $start_time = time();
+    $remotetimer = time();
 
     while(true)
     {
@@ -80,12 +89,20 @@
 
         raspberrypi_running();
 
-
         // Forward data to remote emoncms
 
+      }
+
+      if (time()-$remotetimer>30 && $sent_to_remote == true)
+      {
+        $remotetimer = time();
+
         $remotedata .= "]";
-        echo $remotedata."\n";
-        $remotedata = "[";
+        echo "Sending remote data";
+        //echo $remotedata."\n";
+        getcontent($remotedomain,80,"/input/bulk.json?apikey=".$remoteapikey."&data=".$remotedata);
+        $ni = 0; $remotedata = "[";
+        $start_time = time();
       }
 
       $data = fgets($f);
@@ -106,11 +123,17 @@
               if ($int16>32768) $int16 = -65536 + $int16;
               $msubs .= $int16;
             }
-            echo $msubs."\n";
+            //echo $msubs."\n";
             $url = "/emoncms/input/post?apikey=".$apikey."&node=".$values[1]."&csv=".$msubs;
             getcontent("localhost",80,$url);
 
-            $remotedata .= '['.$msubs.']';
+            if ($sent_to_remote == true)
+            {
+              if ($ni!=0) $remotedata .= ",";
+              $td = intval(time() - $start_time);
+              $remotedata .= '['.$td.','.$values[1].','.$msubs.']'; $ni++;
+            }
+
           }
         }
       }
