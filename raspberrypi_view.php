@@ -14,6 +14,7 @@
 
 <h2>Raspberry PI</h2>
 
+<div style="width:400px; float:left;">
 <form action="set" method="GET" >
 <p><b>Raspberry Pi connected to account: <?php echo get_user_name($settings['userid']); ?></b></p>
 
@@ -28,4 +29,14 @@
 <p>Base ID: (1-26)<br><input type="text" name="baseid" value="<?php echo $settings['baseid']; ?>" /></p>
 
 <br><input type="submit" class="btn" value="Save" />
+
+</div>
+
+<div style="width:400px; float:left;" >
+<p><b>Forward data to remote emoncms</b></p>
+
+<p>Domain name<br><input type="text" name="remotedomain" value="<?php echo $settings['remotedomain']; ?>" /></p>
+<p>Write apikey<br><input type="text" name="remoteapikey" value="<?php echo $settings['remoteapikey']; ?>" /></p>
+
 </form>
+</div>

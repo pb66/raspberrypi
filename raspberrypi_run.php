@@ -64,6 +64,7 @@
     sleep(1);
 
     $start = time();
+    $remotedata = "[";
 
     while(true)
     {
@@ -78,6 +79,13 @@
         if ($settings['baseid'] !=$baseid) {$baseid = $settings['baseid']; fprintf($f,$baseid."i");}
 
         raspberrypi_running();
+
+
+        // Forward data to remote emoncms
+
+        $remotedata .= "]";
+        echo $remotedata."\n";
+        $remotedata = "[";
       }
 
       $data = fgets($f);
@@ -101,6 +109,8 @@
             echo $msubs."\n";
             $url = "/emoncms/input/post?apikey=".$apikey."&node=".$values[1]."&csv=".$msubs;
             getcontent("localhost",80,$url);
+
+            $remotedata .= '['.$msubs.']';
           }
         }
       }

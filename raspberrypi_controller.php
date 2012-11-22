@@ -42,8 +42,10 @@
       $sgroup = intval(get('sgroup'));
       $frequency = intval(get('frequency'));
       $baseid = intval(get('baseid'));
+      $remotedomain = urldecode(get('remotedomain'));
+      $remoteapikey = db_real_escape_string(preg_replace('/[^.\/A-Za-z0-9]/', '', get('remoteapikey')));
 
-      raspberrypi_set($userid,$apikey,$sgroup,$frequency,$baseid);
+      raspberrypi_set($userid,$apikey,$sgroup,$frequency,$baseid,$remotedomain,$remoteapikey);
 
       $output['message'] = "Raspberry PI settings updated"; 
     }

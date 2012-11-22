@@ -6,7 +6,9 @@ $schema['raspberrypi'] = array(
   'sgroup' => array('type' => 'int(11)'),
   'frequency' => array('type' => 'int(11)'),
   'baseid' => array('type' => 'int(11)'),
-  'running' => array('type' => 'int(11)')
+  'running' => array('type' => 'int(11)'),
+  'remotedomain' => array('type' => 'text'),
+  'remoteapikey' => array('type' => 'text')
 );
 
 ?>
