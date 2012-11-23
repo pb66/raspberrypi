@@ -18,16 +18,16 @@
 
     if (!$row)
     {
-      db_query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remoteapikey) VALUES ( '0' , '' ,'1','4','15' ,'http://emoncms.org','YOURAPIKEY');");
+      db_query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remoteapikey, remotesend) VALUES ( '0' , '' ,'1','4','15' ,'http://emoncms.org','YOURAPIKEY');");
       $result = db_query("SELECT * FROM raspberrypi");
       $row = db_fetch_array($result);
     }
     return $row;
   }
 
-  function raspberrypi_set($userid,$apikey,$sgroup,$frequency,$baseid,$remotedomain,$remoteapikey)
+  function raspberrypi_set($userid,$apikey,$sgroup,$frequency,$baseid,$remotedomain,$remoteapikey,$remotesend)
   {
-    db_query("UPDATE raspberrypi SET `userid` = '$userid', `apikey` = '$apikey', `sgroup` = '$sgroup', `frequency` = '$frequency', `baseid` = '$baseid' ,`remotedomain` = '$remotedomain', `remoteapikey` = '$remoteapikey'");
+    db_query("UPDATE raspberrypi SET `userid` = '$userid', `apikey` = '$apikey', `sgroup` = '$sgroup', `frequency` = '$frequency', `baseid` = '$baseid' ,`remotedomain` = '$remotedomain', `remoteapikey` = '$remoteapikey', `remotesend` = '$remotesend' ");
   }
 
   function raspberrypi_running()

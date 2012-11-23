@@ -45,7 +45,13 @@
       $remotedomain = urldecode(get('remotedomain'));
       $remoteapikey = db_real_escape_string(preg_replace('/[^.\/A-Za-z0-9]/', '', get('remoteapikey')));
 
-      raspberrypi_set($userid,$apikey,$sgroup,$frequency,$baseid,$remotedomain,$remoteapikey);
+      $remotesend = false;
+      if ($remotedomain && $remoteapikey) {
+        $result = file_get_contents("http://".$remotedomain."/time/local.json?apikey=".$remoteapikey); 
+        if ($result[0]=='t') $remotesend = true;
+      }
+
+      raspberrypi_set($userid,$apikey,$sgroup,$frequency,$baseid,$remotedomain,$remoteapikey,$remotesend);
 
       $output['message'] = "Raspberry PI settings updated"; 
     }
