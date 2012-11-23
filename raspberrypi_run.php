@@ -90,7 +90,7 @@
         if ($settings['remotedomain'] !=$remotedomain || $settings['remoteapikey'] !=$remoteapikey)
         { 
           $result = file_get_contents("http://".$remotedomain."/time/local.json?apikey=".$remoteapikey);
-          if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; 
+          if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
         }
 
         raspberrypi_running();
