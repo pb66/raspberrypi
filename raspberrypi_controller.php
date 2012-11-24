@@ -29,10 +29,10 @@
     { 
       $settings = raspberrypi_get();
       if ($format == 'html') $output['content'] = view("raspberrypi/raspberrypi_view.php", array('settings'=>$settings));
-       if ((time()-$settings['running'])<20) 
+       if ((time()-$settings['running'])<30) 
          $output['message'] = array('success',"RFM12 to PI interface script is up and running");
        else
-         $output['message'] = array('important',"The RFM12 to PI interface script is not running, you may need to configure cron");
+         $output['message'] = array('important',"No data has been recieved from the RFM12PI in the last 30s. Check if the PI interface script is running, if not you may need to configure cron");
     }
 
     if ($action == "set" && $session['write'])
