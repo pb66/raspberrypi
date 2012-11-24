@@ -18,7 +18,7 @@
 
     if (!$row)
     {
-      db_query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remoteapikey, remotesend) VALUES ( '0' , '' ,'1','4','15' ,'http://emoncms.org','YOURAPIKEY');");
+      db_query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remoteapikey, remotesend) VALUES ( '0' , '' ,'1','4','15' ,'emoncms.org','YOURAPIKEY','false');");
       $result = db_query("SELECT * FROM raspberrypi");
       $row = db_fetch_array($result);
     }
