@@ -23,10 +23,16 @@
   db_connect();
 
   include "raspberrypi_model.php";
+  include "../user/user_model.php";
+  include "../input/input_model.php";
+  include "../input/process_model.php";
   raspberrypi_running();
 
   $settings = raspberrypi_get();
   $apikey = $settings['apikey'];
+  $userid = get_apikey_write_user($apikey);
+  if ($userid == 0) $userid = 1;
+
   $group = $settings['sgroup'];
   $frequency = $settings['frequency'];
   $baseid = $settings['baseid'];
@@ -82,7 +88,10 @@
         $start = time();
 
         $settings = raspberrypi_get();
-        if ($settings['apikey'] !=$apikey) $apikey = $settings['apikey'];
+        if ($settings['apikey'] !=$apikey) {
+          $apikey = $settings['apikey'];
+          $userid = get_apikey_write_user($apikey);
+        }
         if ($settings['sgroup'] !=$group) {$group = $settings['sgroup']; fprintf($f,$group."g");}
         if ($settings['frequency'] !=$frequency) {$frequency = $settings['frequency']; fprintf($f,$frequency."b"); }
         if ($settings['baseid'] !=$baseid) {$baseid = $settings['baseid']; fprintf($f,$baseid."i");}
@@ -121,17 +130,51 @@
           $values = explode(' ',$data);
           if ($values && is_numeric($values[1]))
           {
+            $node = $values[1];
             $msubs = "";
+            $id = 1;
+
+            $inputs = array();
+
             for($i=2; $i<(count($values)-1); $i+=2){
               if ($i>2) $msubs .= ",";
-              //$msubs .= $values[$i] + $values[$i+1]*256;
+
+              // Each iteration here is a input value
+              // The RFM12b data is recieved and forwarded here as number string
+              // each number corresponds to a 8-bit byte of rfm12b data
+              // We start by getting the 16-bit integers by combining 2 8-bit numbers.
+
+              // Get 16-bit integer
               $int16 = $values[$i] + $values[$i+1]*256;
               if ($int16>32768) $int16 = -65536 + $int16;
               $msubs .= $int16;
+              $value = $int16;
+
+              // Next we set the time that the packet was recieved
+              $time = time();
+
+              // Create multinode type input name
+              // We're using the multinode input name convention
+              // which is of the form node10_1, node10_2
+              $name = "node".$node.'_'.$id;
+
+              // Check if input exists and get its id
+              $id = get_input_id($userid,$name);
+
+              if ($id==0) {
+                // If the input does not exist then create it
+                $id = create_input_timevalue($userid,$name,$node,$time,$value);
+              } else {	
+                // If it does exist then set the timevalue			
+                set_input_timevalue($id,$time,$value);
+              }
+              // Put in input list ready for processing
+              $inputs[] = array('id'=>$id,'time'=>$time,'value'=>$value);
+              $id++;
             }
-            //echo $msubs."\n";
-            $url = "/emoncms/input/post?apikey=".$apikey."&node=".$values[1]."&csv=".$msubs;
-            getcontent("localhost",80,$url);
+
+            // Run the input processor (new to call new version of the input processor..)
+            new_process_inputs($userid,$inputs);
 
             if ($sent_to_remote == true)
             {
