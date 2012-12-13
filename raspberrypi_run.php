@@ -18,6 +18,19 @@
 
   chdir(dirname(__FILE__));
 
+  class ProcessArg {
+    const VALUE = 0;
+    const INPUTID = 1;
+    const FEEDID = 2;
+  }
+
+  class DataType {
+    const UNDEFINED = 0;
+    const REALTIME = 1;
+    const DAILY = 2;
+    const HISTOGRAM = 3;
+  }
+
   require "../../settings.php";
   include "../../db.php";
   db_connect();
@@ -25,6 +38,7 @@
   include "raspberrypi_model.php";
   include "../user/user_model.php";
   include "../input/input_model.php";
+  include "../feed/feed_model.php";
   include "../input/process_model.php";
   raspberrypi_running();
 
@@ -132,7 +146,7 @@
           {
             $node = $values[1];
             $msubs = "";
-            $id = 1;
+            $nameid = 1;
 
             $inputs = array();
 
@@ -156,7 +170,7 @@
               // Create multinode type input name
               // We're using the multinode input name convention
               // which is of the form node10_1, node10_2
-              $name = "node".$node.'_'.$id;
+              $name = "node".$node.'_'.$nameid;
 
               // Check if input exists and get its id
               $id = get_input_id($userid,$name);
@@ -170,7 +184,7 @@
               }
               // Put in input list ready for processing
               $inputs[] = array('id'=>$id,'time'=>$time,'value'=>$value);
-              $id++;
+              $nameid++;
             }
 
             // Run the input processor (new to call new version of the input processor..)
