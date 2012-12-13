@@ -38,6 +38,7 @@
   include "raspberrypi_model.php";
   include "../user/user_model.php";
   include "../input/input_model.php";
+  include "../feed/feed_model.php";
   include "../input/process_model.php";
   raspberrypi_running();
 
