@@ -45,6 +45,10 @@
   $settings = raspberrypi_get();
   $apikey = $settings['apikey'];
   $userid = get_apikey_write_user($apikey);
+
+  $session = array();
+  $session['userid'] = $userid;
+
   if ($userid == 0) $userid = 1;
 
   $group = $settings['sgroup'];
