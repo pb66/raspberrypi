@@ -37,6 +37,7 @@
 <p><b>Forward data to remote emoncms server</b></p>
 
 <p>Domain name<br><input type="text" name="remotedomain" value="<?php echo $settings['remotedomain']; ?>" /></p>
+<p>Path to emoncms<br><input type="text" name="remotepath" value="<?php echo $settings['remotepath']; ?>" /></p>
 <p>Write apikey<br><input type="text" name="remoteapikey" value="<?php echo $settings['remoteapikey']; ?>" /></p>
 <?php if ($settings['remotesend']) echo "<p><b>Authentication successful</b></p>"; else echo "<p><b>Incorrect remote server details</b></p>"; ?>
 

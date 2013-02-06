@@ -56,10 +56,11 @@
   $baseid = $settings['baseid'];
 
   $remotedomain = $settings['remotedomain'];
+  $remotepath = $settings['remotepath'];
   $remoteapikey = $settings['remoteapikey'];
 
   $sent_to_remote = false;
-  $result = file_get_contents("http://".$remotedomain."/time/local.json?apikey=".$remoteapikey);
+  $result = file_get_contents("http://".$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
   if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
 
   // Create a stream context that configures the serial port
@@ -114,9 +115,9 @@
         if ($settings['frequency'] !=$frequency) {$frequency = $settings['frequency']; fprintf($f,$frequency."b"); }
         if ($settings['baseid'] !=$baseid) {$baseid = $settings['baseid']; fprintf($f,$baseid."i");}
 
-        if ($settings['remotedomain'] !=$remotedomain || $settings['remoteapikey'] !=$remoteapikey)
+        if ($settings['remotedomain'] !=$remotedomain || $settings['remoteapikey'] !=$remoteapikey || $settings['remotepath'] !=$remotepath)
         { 
-          $result = file_get_contents("http://".$remotedomain."/time/local.json?apikey=".$remoteapikey);
+          $result = file_get_contents("http://".$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
           if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
         }
 
@@ -133,7 +134,7 @@
         $remotedata .= "]";
         echo "Sending remote data";
         //echo $remotedata."\n";
-        getcontent($remotedomain,80,"/input/bulk.json?apikey=".$remoteapikey."&data=".$remotedata);
+        getcontent($remotedomain,80,$remotepath."/input/bulk.json?apikey=".$remoteapikey."&data=".$remotedata);
         $ni = 0; $remotedata = "[";
         $start_time = time();
       }
@@ -211,7 +212,7 @@
 
 function getcontent($server, $port, $file)
 {
-   $cont = "";
+   //$cont = "";
    $ip = gethostbyname($server);
    $fp = fsockopen($ip, $port);
    if (!$fp)
