@@ -1,8 +1,8 @@
 # TODO : 
-# - update RFM2Pi status
 # - time stuff
+# - use threads because serial read is blocking ?
 
-import serial, MySQLdb, MySQLdb.cursors, urllib2
+import serial, MySQLdb, MySQLdb.cursors, urllib2, time
 
 """
 Log function
@@ -12,28 +12,39 @@ def log (text):
     print text
 
 """
-getDBSettings
-Fetch settings in the database
-    # DB keys :
-    # userid, apikey, sgroup ,frequency, baseid, remotedomain, remotepath, remoteapikey, remotesend
-Returns a dictionnary
+DBConnect : connect to the database
+Returns a cursor of type Dictionnary
 """
-def getDBSettings():
+def DBQuery(SQLQuery):
     db = None
     try:
         db=MySQLdb.connect(host="localhost",user="emoncms",passwd="password",db="emoncms",cursorclass=MySQLdb.cursors.DictCursor)
         cur = db.cursor()
-        cur.execute("SELECT * FROM raspberrypi")
-        settings = cur.fetchone()
-    
+        cur.execute(SQLQuery)
+        db.commit()
     except MySQLdb.Error, e:
         log("Error %d: %s" % (e.args[0],e.args[1]))
-        return None
-    finally:    
-        if db:    
-            db.close()
+        return
+    db.close()
+    return cur
 
-    return settings
+"""
+getDBSettings
+Fetch settings in the database
+Returns a dictionnary
+"""
+def getDBSettings():
+    cur = DBQuery("SELECT * FROM raspberrypi")
+    if cur:
+        return cur.fetchone()
+
+"""
+raspberrypi_running()
+Update RFM2Pi link status
+"""
+def raspberry_running():
+    return DBQuery("UPDATE raspberrypi SET running = '%s'" % str(int(time.time())))
+
 
 """
 Heres is the real stuff
@@ -48,9 +59,13 @@ data = '['
 
 # Until death comes
 while True:
+#for i in range(0,1):
     
     # Read serial RX
     received = ser.readline()
+    # Update RFM2Pi link status
+    raspberry_running()
+
     # Dev / debug : Simulate SERIAL RX if not using serial link for real
     #received = ' 10 14 7'
     
@@ -81,8 +96,8 @@ while True:
         log("Values : "+str(values))
     
         # Write data string
-        time = 0
-        data+='['+str(time)+','+str(node)
+        timestamp = 0
+        data+='['+str(timestamp)+','+str(node)
         for val in values:
             data+=','+str(val)
         data+=']'
@@ -102,6 +117,7 @@ while True:
     
         # Get server settings in DB
         settings = getDBSettings()
+        #log(str(settings))
     
         # Assemble local URL string
         url_string_localhost = "http://localhost/emoncms/input/bulk.json?apikey="+settings['apikey']+"&data="+data
@@ -113,7 +129,7 @@ while True:
     
         # Re-initialize data string
         data = '['
-    
+
         # Send
         log("Sending to localhost...")
         result = urllib2.urlopen(url_string_localhost)
@@ -127,7 +143,6 @@ while True:
             log("ok")
         else:
             log("fail")
-    
 
     # Notes
 
