@@ -1,7 +1,6 @@
 # TODO : 
 # - time stuff
 # - use threads because serial read is blocking
-# - try / except : urlopen
 # - rotating logfile
 # - function names consistency...
 
@@ -15,7 +14,7 @@ def log (text):
     print text
 
 """
-DBConnect : connect to the database
+DBQuery : connect to the database
 Returns a cursor of type Dictionnary
 """
 def DBQuery(SQLQuery):
@@ -153,17 +152,27 @@ while True:
 
         # Send
         log("Sending to localhost...")
-        result = urllib2.urlopen(url_string_localhost)
-        if (result.readline() == 'ok'):
-            log("ok")
-        else:
-            log("fail")
+        try:
+            result = urllib2.urlopen(url_string_localhost)
+            if (result.readline() == 'ok'):
+                log("ok")
+            else:
+                log("fail")
+        except urllib2.URLError, e:
+            log("Couldn't send to localhost")
+            log(e.reason)
+        
         log("Sending to remote server...")
-        result = urllib2.urlopen(url_string_remote)
-        if (result.readline() == 'ok'):
-            log("ok")
-        else:
-            log("fail")
+        try:
+            result = urllib2.urlopen(url_string_remote)
+            if (result.readline() == 'ok'):
+                log("ok")
+            else:
+                log("fail")
+        except urllib2.URLError, e:
+            log("Couldn't send to remote server")
+            log(e.reason)
+        
 
     # Notes
 
