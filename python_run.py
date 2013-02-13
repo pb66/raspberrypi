@@ -1,6 +1,9 @@
 # TODO : 
 # - time stuff
-# - use threads because serial read is blocking ?
+# - use threads because serial read is blocking
+# - try / except : urlopen
+# - rotating logfile
+# - function names consistency...
 
 import serial, MySQLdb, MySQLdb.cursors, urllib2, time
 
@@ -45,6 +48,20 @@ Update RFM2Pi link status
 def raspberry_running():
     return DBQuery("UPDATE raspberrypi SET running = '%s'" % str(int(time.time())))
 
+"""
+setRFM2PiSettings()
+Set RFM2Pi settings
+"""
+def setRFM2PiSettings(ser):
+    s = getDBSettings()
+    log("Sending RFM2Pi settings")
+    log("Base id: %d\nFrequency: %d\nGroup: %d" % (s['baseid'], s['frequency'], s['sgroup']))
+    ser.write(str(s['baseid'])+'i')
+    time.sleep(1); # Does this really work ?
+    ser.write(str(s['frequency'])+'b')
+    time.sleep(1);
+    ser.write(str(s['sgroup'])+'g')
+    time.sleep(1);
 
 """
 Heres is the real stuff
@@ -53,6 +70,9 @@ Heres is the real stuff
 
 # Open serial port
 ser = serial.Serial('/dev/ttyAMA0', 9600)
+
+# Initialize RFM2Pi
+setRFM2PiSettings(ser)
 
 # Initialize data string
 data = '['
@@ -105,9 +125,10 @@ while True:
         #log("data : "+data)
     
 
-    # Check settings from times to times
-    # What for ? group, freq, baseid ?
-    
+    # Update RFM2Pi settings from times to times
+    #if True:
+    #    setRFM2PiSettings(ser)
+
     # Send data once in a while
     if True: # Need to add a time condition here, but before that, introduce 'timestamps'
     
