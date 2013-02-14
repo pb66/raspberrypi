@@ -1,17 +1,11 @@
 # TODO : 
 # - time stuff
 # - use threads because serial read is blocking
-# - rotating logfile
 # - function names consistency...
 
 import serial, MySQLdb, MySQLdb.cursors, urllib2, time
+import logging, logging.handlers
 
-"""
-Log function
-"""
-def log (text):
-# Placeholder for log function
-    print text
 
 """
 DBQuery : connect to the database
@@ -25,7 +19,7 @@ def DBQuery(SQLQuery):
         cur.execute(SQLQuery)
         db.commit()
     except MySQLdb.Error, e:
-        log("Error %d: %s" % (e.args[0],e.args[1]))
+        log.error("Error %d: %s" % (e.args[0],e.args[1]))
         return
     db.close()
     return cur
@@ -52,20 +46,27 @@ setRFM2PiSettings()
 Set RFM2Pi settings
 """
 def setRFM2PiSettings(ser):
+    # TODO : only send if different
     s = getDBSettings()
-    log("Sending RFM2Pi settings")
-    log("Base id: %d\nFrequency: %d\nGroup: %d" % (s['baseid'], s['frequency'], s['sgroup']))
-    ser.write(str(s['baseid'])+'i')
-    time.sleep(1); # Does this really work ?
-    ser.write(str(s['frequency'])+'b')
-    time.sleep(1);
-    ser.write(str(s['sgroup'])+'g')
-    time.sleep(1);
+    if s:
+        log.info("Sending RFM2Pi settings")
+        log.info("Base id: %d, Frequency: %d, Group: %d" % (s['baseid'], s['frequency'], s['sgroup']))
+        ser.write(str(s['baseid'])+'i')
+        time.sleep(1); # Does this really work ?
+        ser.write(str(s['frequency'])+'b')
+        time.sleep(1);
+        ser.write(str(s['sgroup'])+'g')
+        time.sleep(1);
 
 """
 Heres is the real stuff
 """
-# Initialization
+# Initialize the logging
+log = logging.getLogger('MyLog')
+logfile = logging.handlers.RotatingFileHandler('./RFM2Py.log', 'a', 50 * 1024, 1)
+logfile.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+log.addHandler(logfile)
+log.setLevel(logging.DEBUG)
 
 # Open serial port
 ser = serial.Serial('/dev/ttyAMA0', 9600)
@@ -87,8 +88,7 @@ while True:
 
     # Dev / debug : Simulate SERIAL RX if not using serial link for real
     #received = ' 10 14 7'
-    
-    log("Serial RX : "+received)
+    log.info("Serial RX : "+received[:-1]) # Remove CR,LF
     
     # Get an array out of the space separated string
     received = received.strip().split(' ')
@@ -111,8 +111,8 @@ while True:
                 value = -65536 + value
             values.append(value)
         
-        log("Node : "+node)
-        log("Values : "+str(values))
+        log.debug("Node : "+node)
+        log.debug("Values : "+str(values))
     
         # Write data string
         timestamp = 0
@@ -121,7 +121,7 @@ while True:
             data+=','+str(val)
         data+=']'
     
-        #log("data : "+data)
+        #log.debug("data : "+data)
     
 
     # Update RFM2Pi settings from times to times
@@ -133,45 +133,46 @@ while True:
     
         # Close last bracket in data string
         data+=']'
-        log("data : "+data)
+        log.debug("data : "+data)
     
         # Get server settings in DB
+        # TODO : do something if settings = None (couldn't access DB)
         settings = getDBSettings()
-        #log(str(settings))
+        #log.debug(str(settings))
     
         # Assemble local URL string
         url_string_localhost = "http://localhost/emoncms/input/bulk.json?apikey="+settings['apikey']+"&data="+data
-        log(url_string_localhost)
+        log.debug(url_string_localhost)
     
         # Assemble remote URL string
         url_string_remote = "http://"+settings['remotedomain']+settings['remotepath']+"/input/bulk.json?apikey="+settings['remoteapikey']+"&data="+data
-        log(url_string_remote)
+        log.debug(url_string_remote)
     
         # Re-initialize data string
         data = '['
 
         # Send
-        log("Sending to localhost...")
+        log.info("Sending to localhost...")
         try:
             result = urllib2.urlopen(url_string_localhost)
             if (result.readline() == 'ok'):
-                log("ok")
+                log.info("ok")
             else:
-                log("fail")
+                log.info("fail")
         except urllib2.URLError, e:
-            log("Couldn't send to localhost")
-            log(e.reason)
+            log.warning("Couldn't send to localhost")
+            log.warning(e.reason)
         
-        log("Sending to remote server...")
+        log.info("Sending to remote server...")
         try:
             result = urllib2.urlopen(url_string_remote)
             if (result.readline() == 'ok'):
-                log("ok")
+                log.info("ok")
             else:
-                log("fail")
+                log.info("fail")
         except urllib2.URLError, e:
-            log("Couldn't send to remote server")
-            log(e.reason)
+            log.warning("Couldn't send to remote server")
+            log.warning(e.reason)
         
 
     # Notes
