@@ -1,10 +1,14 @@
 # TODO : 
 # - time stuff
 # - use threads because serial read is blocking
-# - function names consistency...
-
-import serial, MySQLdb, MySQLdb.cursors, urllib2, time
+# - function names consistency... http://www.python.org/dev/peps/pep-0008/
+import serial
+import MySQLdb, MySQLdb.cursors
+import urllib2
+import time
 import logging, logging.handlers
+import re
+
 
 
 """
@@ -59,7 +63,7 @@ def setRFM2PiSettings(ser):
         time.sleep(1);
 
 """
-Heres is the real stuff
+Here is the real stuff
 """
 # Initialize the logging
 log = logging.getLogger('MyLog')
@@ -69,7 +73,7 @@ log.addHandler(logfile)
 log.setLevel(logging.DEBUG)
 
 # Open serial port
-ser = serial.Serial('/dev/ttyAMA0', 9600)
+ser = serial.Serial('/dev/ttyAMA0', 9600, timeout = 0)
 
 # Initialize RFM2Pi
 setRFM2PiSettings(ser)
@@ -77,59 +81,73 @@ setRFM2PiSettings(ser)
 # Initialize data string
 data = '['
 
+serial_rx_buf = ''
+
 # Until death comes
 while True:
-#for i in range(0,1):
     
     # Read serial RX
-    received = ser.readline()
-    # Update RFM2Pi link status
-    raspberry_running()
+    serial_rx_buf = serial_rx_buf + ser.readline()
 
-    # Dev / debug : Simulate SERIAL RX if not using serial link for real
-    #received = ' 10 14 7'
-    log.info("Serial RX : "+received[:-1]) # Remove CR,LF
-    
-    # Get an array out of the space separated string
-    received = received.strip().split(' ')
-    
-    # If emonTX headers (>), discard ?
-    if (received[0] == '>'):
-        # WTF ?
-        continue
-    
-    # Else, treat value
-    else:
-        # Get node ID
-        node = received[0]
+    # If full line was read, process
+    if ((serial_rx_buf != '') and (serial_rx_buf[len(serial_rx_buf)-1] == '\n')):
+
+        # Remove CR,LF
+        serial_rx_buf = re.sub('\\r\\n', '', serial_rx_buf)
         
-        # Recombine transmitted chars into signed int
-        values = []
-        for i in range(1,len(received),2):
-            value = int(received[i])+256*int(received[i+1])
-            if value > 32768:
-                value = -65536 + value
-            values.append(value)
+        # Log data
+        log.info("Serial RX : " + serial_rx_buf)
         
-        log.debug("Node : "+node)
-        log.debug("Values : "+str(values))
+        # Update RFM2Pi link status
+        raspberry_running()
+        
+        # Get an array out of the space separated string
+        received = serial_rx_buf.strip().split(' ')
+        
+        # Empty serial_rx_buf
+        serial_rx_buf = ''
+        
+        # If emonTX headers (>), discard ?
+        if (received[0] == '>'):
+            # WTF ?
+            continue
+        
+        # Else, frame should be of the form [node val1_lsb val1_msb val2_lsb val2_msb ...]
+        elif ((not (len(received) & 1)) or (len(received) < 3)): 
+            # If number of values is not odd or less than 3, frame can't be processed
+            log.warning("Misformed RX frame: " + str(received))
+        else:
+            # Get node ID
+            node = received[0]
+            
+            # Recombine transmitted chars into signed int
+            values = []
+            for i in range(1,len(received),2):
+                value = int(received[i])+256*int(received[i+1])
+                if value > 32768:
+                    value = -65536 + value
+                values.append(value)
+            
+            log.debug("Node : "+node)
+            log.debug("Values : "+str(values))
+        
+            # Write data string
+            timestamp = 0
+            data+='['+str(timestamp)+','+str(node)
+            for val in values:
+                data+=','+str(val)
+            data+=']'
+            #log.debug("data : "+data)
     
-        # Write data string
-        timestamp = 0
-        data+='['+str(timestamp)+','+str(node)
-        for val in values:
-            data+=','+str(val)
-        data+=']'
-    
-        #log.debug("data : "+data)
-    
+        
 
     # Update RFM2Pi settings from times to times
     #if True:
     #    setRFM2PiSettings(ser)
 
     # Send data once in a while
-    if True: # Need to add a time condition here, but before that, introduce 'timestamps'
+    # If there is data : # Need to add time condition...
+    if (data != '['):
     
         # Close last bracket in data string
         data+=']'
@@ -159,9 +177,15 @@ while True:
                 log.info("ok")
             else:
                 log.info("fail")
+        except urllib2.HTTPError, e:
+            log.warning("Couldn't send to localhost, HTTPError: " + str(e.code))
         except urllib2.URLError, e:
-            log.warning("Couldn't send to localhost")
-            log.warning(e.reason)
+            log.warning("Couldn't send to localhost, URLError: " + str(e.reason))
+        except httplib.HTTPException, e:
+            log.warning("Couldn't send to localhost, HTTPException")
+        except Exception:
+            import traceback
+            log.warning("Couldn't send to localhost, Exception: " + traceback.format_exc())
         
         log.info("Sending to remote server...")
         try:
@@ -170,9 +194,15 @@ while True:
                 log.info("ok")
             else:
                 log.info("fail")
+        except urllib2.HTTPError, e:
+            log.warning("Couldn't send to remote server, HTTPError: " + str(e.code))
         except urllib2.URLError, e:
-            log.warning("Couldn't send to remote server")
-            log.warning(e.reason)
+            log.warning("Couldn't send to remote server, URLError: " + str(e.reason))
+        except httplib.HTTPException, e:
+            log.warning("Couldn't send to remote server, HTTPException")
+        except Exception:
+            import traceback
+            log.warning("Couldn't send to remote server, Exception: " + traceback.format_exc())
         
 
     # Notes
@@ -189,4 +219,4 @@ while True:
     Sending remote data
     GET /emoncms/input/bulk.json?apikey=12345&data=[[0,10,1806],[0,10,1806],[4,10,1806],[7,10,1806],[11,10,1806],[15,10,1800],[19,10,1800],[23,10,1800],[26,10,1806],[30,10,1806],[34,10,1800]] HTTP/1.1
     """
- 
+
