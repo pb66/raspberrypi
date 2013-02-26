@@ -1,14 +1,124 @@
 # TODO : 
-# - time stuff
-# - use threads because serial read is blocking
-# - function names consistency... http://www.python.org/dev/peps/pep-0008/
+# - use threads for HTTP requests (one thread per server)
+# - pythonism : function names consistency... 
+#               http://www.python.org/dev/peps/pep-0008/
 import serial
 import MySQLdb, MySQLdb.cursors
-import urllib2
+import urllib2, httplib
 import time
 import logging, logging.handlers
 import re
+#import thread
 
+"""class ServerDataBuffer
+
+Stores server parameters and buffers the data between two HTTP requests
+
+"""
+class serverdatabuffer():
+
+    def __init__(self, domain, path, apikey, period):
+        """Create a server data buffer initialized with server settings.
+        
+        domain (string): domain name (eg: 'domain.tld')
+        path (string): emoncms path with leading slash (eg: '/emoncms')
+        apikey (string): API key with write access
+        period (int): sending interval in seconds
+        
+        """
+        self._domain = domain
+        self._path = path
+        self._apikey = apikey
+        self._period = period
+        self._data_buffer = []
+        self._last_send = time.time()
+        #self.lock = thread.lock()
+
+    def update_settings(self, domain=None, path=None, apikey=None, period=None):
+        """Update server settings."""
+        if domain:
+            self._domain = domain
+        if path:
+            self._path = path
+        if apikey:
+            self._apikey = apikey
+        if period:
+            self._period = period
+
+    def add_data(self, data):
+        """Append timestamped dataset to buffer.
+
+        data (list): node and values (eg: '[node,val1,val2,...]')
+
+        """
+        log.debug('Server ' + self._domain + self._path + ' -> add data: ' + str(data))
+        # Insert timestamp before data
+        dataset = list(data) # Make a distinct copy: we don't want to modify data
+        dataset.insert(0,time.time())
+        # acquire(self.lock)
+        # Append new data set [timestamp, node, val1, val2, val3,...] to _data_buffer
+        self._data_buffer.append(dataset)
+        # release lock
+
+    def send_data(self):
+        """Send data to server."""
+        # Prepare data string with the values in data buffer
+        now = time.time()
+        data_string = '['
+        #acquire(self.lock)
+        for data in self._data_buffer:
+            data_string += '['
+            data_string += str(int(round(data[0]-now)))
+            for sample in data[1:]:
+                data_string += ','
+                data_string += str(sample)
+            data_string += '],'
+        data_string = data_string[0:-1]+']' # Remove trailing comma and close bracket 
+        self._data_buffer = []
+        #release lock
+        log.debug('Data string: ' + data_string)
+        
+        # Prepare URL string of the form
+        # 'http://domain.tld/emoncms/input/bulk.json?apikey=12345&data=[[-10,10,1806],[-5,10,1806],[0,10,1806]]'
+        url_string = "http://"+self._domain+self._path+"/input/bulk.json?apikey="+self._apikey+"&data="+data_string
+        log.debug('URL string: ' + url_string)
+
+        # Send data to server
+        # TODO : manage failures: currently, data is just lost
+        # We could keep it and retry, and trash after given amount of time/data
+        log.info("Sending to " + self._domain + self._path)
+        try:
+            result = urllib2.urlopen(url_string)
+            if (result.readline() == 'ok'):
+                log.info("ok")
+            else:
+                log.info("fail")
+        except urllib2.HTTPError, e:
+            log.warning("Couldn't send to server, HTTPError: " + str(e.code))
+        except urllib2.URLError, e:
+            log.warning("Couldn't send to server, URLError: " + str(e.reason))
+        except httplib.HTTPException, e:
+            log.warning("Couldn't send to server, HTTPException")
+        except Exception:
+            import traceback
+            log.warning("Couldn't send to server, Exception: " + traceback.format_exc())
+        
+        # Update _last_send
+        self._last_send = time.time()
+
+    def checktime(self):
+        """Check if it is time to send data to server.
+        
+        return True if sending interval has passed since last time
+
+        """
+        now = time.time()
+        if (now - self._last_send > self._period):
+            return True
+    
+    def has_data(self):
+        """Return True if data buffer is not empty."""
+        return (self._data_buffer != [])
 
 
 """
@@ -72,16 +182,30 @@ logfile.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
 log.addHandler(logfile)
 log.setLevel(logging.DEBUG)
 
+# Fetch settings
+settings = getDBSettings()
+
+# Initialize serial RX buffer
+serial_rx_buf = ''
+
+# Initialize target emoncms server buffers
+local_server_buf = serverdatabuffer('localhost',
+                                    '/emoncms', 
+                                    settings['apikey'], 
+                                    0)
+
+remote_server_buf = serverdatabuffer(settings['remotedomain'], 
+                                     settings['remotepath'],
+                                     settings['remoteapikey'],
+                                     30)
+
+server_buffers = [local_server_buf, remote_server_buf]
+
 # Open serial port
 ser = serial.Serial('/dev/ttyAMA0', 9600, timeout = 0)
 
 # Initialize RFM2Pi
 setRFM2PiSettings(ser)
-
-# Initialize data string
-data = '['
-
-serial_rx_buf = ''
 
 # Until death comes
 while True:
@@ -96,7 +220,7 @@ while True:
         serial_rx_buf = re.sub('\\r\\n', '', serial_rx_buf)
         
         # Log data
-        log.info("Serial RX : " + serial_rx_buf)
+        log.info("Serial RX: " + serial_rx_buf)
         
         # Update RFM2Pi link status
         raspberry_running()
@@ -118,7 +242,7 @@ while True:
             log.warning("Misformed RX frame: " + str(received))
         else:
             # Get node ID
-            node = received[0]
+            node = int(received[0])
             
             # Recombine transmitted chars into signed int
             values = []
@@ -128,95 +252,25 @@ while True:
                     value = -65536 + value
                 values.append(value)
             
-            log.debug("Node : "+node)
-            log.debug("Values : "+str(values))
-        
-            # Write data string
-            timestamp = 0
-            data+='['+str(timestamp)+','+str(node)
-            for val in values:
-                data+=','+str(val)
-            data+=']'
-            #log.debug("data : "+data)
-    
-        
+            log.debug("Node: " + str(node))
+            log.debug("Values: " + str(values))
 
-    # Update RFM2Pi settings from times to times
+            # Add data to send buffers
+            values.insert(0,node)
+            for server_buf in server_buffers:
+                server_buf.add_data(values)
+    
+    # Send data if time has come
+    for server_buf in server_buffers:
+        if server_buf.checktime():
+            if server_buf.has_data():
+                server_buf.send_data()
+
+
+    # Update settings from times to times
+    #RFM2Pi settings
     #if True:
     #    setRFM2PiSettings(ser)
+    #server settings
 
-    # Send data once in a while
-    # If there is data : # Need to add time condition...
-    if (data != '['):
-    
-        # Close last bracket in data string
-        data+=']'
-        log.debug("data : "+data)
-    
-        # Get server settings in DB
-        # TODO : do something if settings = None (couldn't access DB)
-        settings = getDBSettings()
-        #log.debug(str(settings))
-    
-        # Assemble local URL string
-        url_string_localhost = "http://localhost/emoncms/input/bulk.json?apikey="+settings['apikey']+"&data="+data
-        log.debug(url_string_localhost)
-    
-        # Assemble remote URL string
-        url_string_remote = "http://"+settings['remotedomain']+settings['remotepath']+"/input/bulk.json?apikey="+settings['remoteapikey']+"&data="+data
-        log.debug(url_string_remote)
-    
-        # Re-initialize data string
-        data = '['
-
-        # Send
-        log.info("Sending to localhost...")
-        try:
-            result = urllib2.urlopen(url_string_localhost)
-            if (result.readline() == 'ok'):
-                log.info("ok")
-            else:
-                log.info("fail")
-        except urllib2.HTTPError, e:
-            log.warning("Couldn't send to localhost, HTTPError: " + str(e.code))
-        except urllib2.URLError, e:
-            log.warning("Couldn't send to localhost, URLError: " + str(e.reason))
-        except httplib.HTTPException, e:
-            log.warning("Couldn't send to localhost, HTTPException")
-        except Exception:
-            import traceback
-            log.warning("Couldn't send to localhost, Exception: " + traceback.format_exc())
-        
-        log.info("Sending to remote server...")
-        try:
-            result = urllib2.urlopen(url_string_remote)
-            if (result.readline() == 'ok'):
-                log.info("ok")
-            else:
-                log.info("fail")
-        except urllib2.HTTPError, e:
-            log.warning("Couldn't send to remote server, HTTPError: " + str(e.code))
-        except urllib2.URLError, e:
-            log.warning("Couldn't send to remote server, URLError: " + str(e.reason))
-        except httplib.HTTPException, e:
-            log.warning("Couldn't send to remote server, HTTPException")
-        except Exception:
-            import traceback
-            log.warning("Couldn't send to remote server, Exception: " + traceback.format_exc())
-        
-
-    # Notes
-
-    #http://docs.python.org/2/howto/urllib2.html
-    
-    #result = urllib2.urlopen("http://"+settings['remotedomain']+settings['remotepath']+"/time/local.json?apikey="+settings['remoteapikey'])
-    #if ("t" == result.read(1)):
-    #    print "cool"
-    #else:
-    #    print "not cool"
-    
-    """ Format
-    Sending remote data
-    GET /emoncms/input/bulk.json?apikey=12345&data=[[0,10,1806],[0,10,1806],[4,10,1806],[7,10,1806],[11,10,1806],[15,10,1800],[19,10,1800],[23,10,1800],[26,10,1806],[30,10,1806],[34,10,1800]] HTTP/1.1
-    """
 
