@@ -1,14 +1,17 @@
 # TODO : 
-# - use threads for HTTP requests (one thread per server)
-# - pythonism : function names consistency... 
-#               http://www.python.org/dev/peps/pep-0008/
+# - check settings on a regular basis
+# - allow any number of servers
+# - add new parameters instead of hardcoding (log level, sending interval...)
+# - register PID to allow SIGINT from GUI
+# - cleanup, reorganize functions / classes, follow coding rules 
+#       http://www.python.org/dev/peps/pep-0008/
 import serial
 import MySQLdb, MySQLdb.cursors
 import urllib2, httplib
 import time
 import logging, logging.handlers
 import re
-#import thread
+import signal
 
 """class ServerDataBuffer
 
@@ -32,7 +35,6 @@ class serverdatabuffer():
         self._period = period
         self._data_buffer = []
         self._last_send = time.time()
-        #self.lock = thread.lock()
 
     def update_settings(self, domain=None, path=None, apikey=None, period=None):
         """Update server settings."""
@@ -55,17 +57,14 @@ class serverdatabuffer():
         # Insert timestamp before data
         dataset = list(data) # Make a distinct copy: we don't want to modify data
         dataset.insert(0,time.time())
-        # acquire(self.lock)
         # Append new data set [timestamp, node, val1, val2, val3,...] to _data_buffer
         self._data_buffer.append(dataset)
-        # release lock
 
     def send_data(self):
         """Send data to server."""
         # Prepare data string with the values in data buffer
         now = time.time()
         data_string = '['
-        #acquire(self.lock)
         for data in self._data_buffer:
             data_string += '['
             data_string += str(int(round(data[0]-now)))
@@ -75,7 +74,6 @@ class serverdatabuffer():
             data_string += '],'
         data_string = data_string[0:-1]+']' # Remove trailing comma and close bracket 
         self._data_buffer = []
-        #release lock
         log.debug('Data string: ' + data_string)
         
         # Prepare URL string of the form
@@ -173,8 +171,21 @@ def setRFM2PiSettings(ser):
         time.sleep(1);
 
 """
+sigint_handler()
+"""
+def sigint_handler(signal, frame):
+    """Catch SIGINT (Ctrl+C)."""
+    global sigint_received
+    log.debug("SIGINT received.")
+    sigint_received = True
+
+"""
 Here is the real stuff
 """
+# Set signal handler to catch SIGINT
+sigint_received = False
+signal.signal(signal.SIGINT, sigint_handler)
+
 # Initialize the logging
 log = logging.getLogger('MyLog')
 logfile = logging.handlers.RotatingFileHandler('./RFM2Py.log', 'a', 50 * 1024, 1)
@@ -207,8 +218,8 @@ ser = serial.Serial('/dev/ttyAMA0', 9600, timeout = 0)
 # Initialize RFM2Pi
 setRFM2PiSettings(ser)
 
-# Until death comes
-while True:
+# Until asked to stop
+while not sigint_received:
     
     # Read serial RX
     serial_rx_buf = serial_rx_buf + ser.readline()
@@ -273,4 +284,5 @@ while True:
     #    setRFM2PiSettings(ser)
     #server settings
 
+log.info("Exiting...")
 
