@@ -15,7 +15,6 @@
 """
 TODO : 
 - add new parameters instead of hardcoding (log level, sending interval...)
-- share settings file with emoncms
 - allow any number of servers (instead of hardcoding 1 local and 1 remote) ?
 """
 
@@ -27,6 +26,7 @@ import logging, logging.handlers
 import re
 import signal
 import os
+import ConfigParser
 
 """class ServerDataBuffer
 
@@ -166,8 +166,11 @@ class RFM2PiGateway():
         self.log.addHandler(logfile)
         self.log.setLevel(logging.DEBUG)
         
+        # Initialize DB configuration
+        self._db_config = ConfigParser.RawConfigParser()
+
         # Fetch settings from DB
-        self._settings = self._get_DB_settings()
+        self._settings = self._db_get_settings()
         # If DB connexion fails, exit
         if self._settings is None:
             self.log.error("Connexion to DB failed. Exiting...")
@@ -303,7 +306,7 @@ class RFM2PiGateway():
         # gateway should exit at the end of current iteration.
         self._exit = True
 
-    def _DB_query(self, SQLQuery):
+    def _db_query(self, SQLQuery):
         """Connect to the database and execute a query
         
         SQLQuery (string): SQL query to execute
@@ -312,9 +315,22 @@ class RFM2PiGateway():
 
         """
         
+        # Read DB connection parameters from config file
+        self._db_config.read('../../settings.ini')
+        try:
+            host=self._db_config.get('database', 'server')
+            user=self._db_config.get('database', 'username')
+            password=self._db_config.get('database', 'password')
+            database=self._db_config.get('database', 'database')
+        except Exception:
+            self.log.error('Missing database config parameter in settings.ini.')
+            return
+        
+        # Connect to database and execture query
         db = None
         try:
-            db = MySQLdb.connect(host="localhost",user="emoncms",passwd="password",db="emoncms",cursorclass=MySQLdb.cursors.DictCursor)
+            db = MySQLdb.connect(host,user,password,database,
+                                 cursorclass=MySQLdb.cursors.DictCursor)
             cur = db.cursor()
             cur.execute(SQLQuery)
             db.commit()
@@ -324,17 +340,17 @@ class RFM2PiGateway():
         db.close()
         return cur
     
-    def _get_DB_settings(self):
+    def _db_get_settings(self):
         """Fetch settings in the database
         
         Returns a dictionnary
 
         """
-        cur = self._DB_query("SELECT * FROM raspberrypi")
+        cur = self._db_query("SELECT * FROM raspberrypi")
         if cur:
             return cur.fetchone()
 
-    def _set_RFM2Pi_setting(self, setting, value):
+    def _set_rfm2pi_setting(self, setting, value):
         """Send a configuration parameter to the RFM2Pi through COM port.
         
         setting (string): setting to be sent, can be one of the following:
@@ -361,7 +377,7 @@ class RFM2PiGateway():
         """
         
         # Get settings from DB
-        s_new = self._DB_query("SELECT * FROM raspberrypi").fetchone()
+        s_new = self._db_query("SELECT * FROM raspberrypi").fetchone()
         
         # If s_new is None, DB connection failed
         if s_new is None:
@@ -371,7 +387,7 @@ class RFM2PiGateway():
         # RFM2Pi settings
         for param in ['baseid', 'frequency', 'sgroup']:
             if ((s_new[param] != self._settings[param]) or force_RFM2Pi_update):
-                self._set_RFM2Pi_setting(param,str(s_new[param]))
+                self._set_rfm2pi_setting(param,str(s_new[param]))
             
         # Server settings
         self._local_server_buf.update_settings(apikey=self._settings['apikey'])
@@ -403,7 +419,7 @@ class RFM2PiGateway():
     def _raspberrypi_running(self):
         """Update "script running" status in DB."""
 
-        return self._DB_query("UPDATE raspberrypi SET running = '%s'" % str(int(time.time())))
+        return self._db_query("UPDATE raspberrypi SET running = '%s'" % str(int(time.time())))
 
 
 if __name__ == "__main__":
