@@ -246,34 +246,41 @@ class RFM2PiGateway():
                 # Empty serial_rx_buf
                 self._serial_rx_buf = ''
                 
-                # If emonTX headers (>), discard ?
-                if (received[0] == '>'):
-                    # WTF ?
+                # If information message, discard
+                if ((received[0] == '>') or (received[0] == '->')):
                     continue
-                
-                # Else, frame should be of the form [node val1_lsb val1_msb val2_lsb val2_msb ...]
-                elif ((not (len(received) & 1)) or (len(received) < 3)): 
-                    # If number of values is not odd or less than 3, frame can't be processed
+
+                # Else,frame should be of the form 
+                # [node val1_lsb val1_msb val2_lsb val2_msb ...]
+                # with number of elements odd and at least 3
+                elif ((not (len(received) & 1)) or (len(received) < 3)):
                     self.log.warning("Misformed RX frame: " + str(received))
+                
+                # Else, process frame
                 else:
-                    # Get node ID
-                    node = int(received[0])
-                    
-                    # Recombine transmitted chars into signed int
-                    values = []
-                    for i in range(1,len(received),2):
-                        value = int(received[i])+256*int(received[i+1])
-                        if value > 32768:
-                            value = -65536 + value
-                        values.append(value)
-                    
-                    self.log.debug("Node: " + str(node))
-                    self.log.debug("Values: " + str(values))
-        
-                    # Add data to send buffers
-                    values.insert(0,node)
-                    for server_buf in self._server_buffers:
-                        server_buf.add_data(values)
+                    try:
+                        received = [int(val) for val in received]
+                    except Exception:
+                        self.log.warning("Misformed RX frame: " + str(received))
+                    else:
+                        # Get node ID
+                        node = received[0]
+                        
+                        # Recombine transmitted chars into signed int
+                        values = []
+                        for i in range(1,len(received),2):
+                            value = received[i] + 256 * received[i+1]
+                            if value > 32768:
+                                value -= 65536
+                            values.append(value)
+                        
+                        self.log.debug("Node: " + str(node))
+                        self.log.debug("Values: " + str(values))
+            
+                        # Add data to send buffers
+                        values.insert(0,node)
+                        for server_buf in self._server_buffers:
+                            server_buf.add_data(values)
             
             # Send data if time has come
             for server_buf in self._server_buffers:
