@@ -22,7 +22,7 @@ TODO :
 import serial
 import MySQLdb, MySQLdb.cursors
 import urllib2, httplib
-import time
+import time, datetime
 import logging, logging.handlers
 import re
 import signal
@@ -189,6 +189,7 @@ class RFM2PiGateway():
             self.log.error("Connexion to DB failed. Exiting...")
             raise Exception('Connexion to DB failed.')
         self._status_update_timestamp = 0
+        self._time_update_timestamp = 0
         
         # Open serial port
         self._ser = self._open_serial_port()
@@ -227,6 +228,11 @@ class RFM2PiGateway():
                 # "Thanks for the status update. You've made it crystal clear."
                 self._status_update_timestamp = now
             
+            # Send time every minute to synchronize emonGLCD
+            if (now - self._time_update_timestamp > 60):
+                self._send_time()
+                self._time_update_timestamp = now
+
             # Read serial RX
             self._serial_rx_buf = self._serial_rx_buf + self._ser.readline()
         
@@ -449,6 +455,16 @@ class RFM2PiGateway():
         """Update "script running" status in DB."""
 
         return self._db_query("UPDATE raspberrypi SET running = '%s'" % str(int(time.time())))
+
+    
+    def _send_time(self):
+        """Send time over radio link to synchronize emonGLCD."""
+
+        now = datetime.datetime.now()
+
+        self.log.debug("Sending time for emonGLCD: %d:%d" % (now.hour, now.minute))
+
+        self._ser.write("%02d,00,%02d,00,s" % (now.hour, now.minute))
 
 
 if __name__ == "__main__":
