@@ -14,6 +14,7 @@
 
 """
 TODO : 
+- make remote server optional
 - add new parameters instead of hardcoding (log level, sending interval...)
 - allow any number of servers (instead of hardcoding 1 local and 1 remote) ?
 """
@@ -35,7 +36,7 @@ Stores server parameters and buffers the data between two HTTP requests
 """
 class ServerDataBuffer():
 
-    def __init__(self, gateway, domain, path, apikey, period):
+    def __init__(self, gateway, domain, path, apikey, period, active):
         """Create a server data buffer initialized with server settings.
         
         domain (string): domain name (eg: 'domain.tld')
@@ -51,17 +52,20 @@ class ServerDataBuffer():
         self._period = period
         self._data_buffer = []
         self._last_send = time.time()
+        self._active = active
 
-    def update_settings(self, domain=None, path=None, apikey=None, period=None):
+    def update_settings(self, domain=None, path=None, apikey=None, period=None, active=None):
         """Update server settings."""
-        if domain:
+        if domain is not None:
             self._domain = domain
-        if path:
+        if path is not None:
             self._path = path
-        if apikey:
+        if apikey is not None:
             self._apikey = apikey
-        if period:
+        if period is not None:
             self._period = period
+        if active is not None:
+            self._active = active
 
     def add_data(self, data):
         """Append timestamped dataset to buffer.
@@ -69,7 +73,12 @@ class ServerDataBuffer():
         data (list): node and values (eg: '[node,val1,val2,...]')
 
         """
+        
+        if not self._active:
+            return
+        
         self._gateway.log.debug("Server " + self._domain + self._path + " -> add data: " + str(data))
+        
         # Insert timestamp before data
         dataset = list(data) # Make a distinct copy: we don't want to modify data
         dataset.insert(0,time.time())
@@ -78,6 +87,10 @@ class ServerDataBuffer():
 
     def send_data(self):
         """Send data to server."""
+        
+        if not self._active:
+            return
+
         # Prepare data string with the values in data buffer
         now = time.time()
         data_string = '['
@@ -179,7 +192,6 @@ class RFM2PiGateway():
         
         # Open serial port
         self._ser = self._open_serial_port()
-        #print self._ser
         if self._ser is None:
             self.log.error("COM port opening failed. Exiting...")
             raise Exception('COM port opening failed.')
@@ -187,23 +199,11 @@ class RFM2PiGateway():
         # Initialize serial RX buffer
         self._serial_rx_buf = ''
         
-        # Initialize target emoncms server buffers
-        self._local_server_buf = ServerDataBuffer(self,
-            'localhost',
-            '/emoncms', 
-            self._settings['apikey'], 
-            0)
+        # Initialize target emoncms server buffer set
+        self._server_buffers = {}
         
-        self._remote_server_buf = ServerDataBuffer(self,
-            self._settings['remotedomain'], 
-            self._settings['remotepath'],
-            self._settings['remoteapikey'],
-            30)
-        
-        self._server_buffers = [self._local_server_buf, self._remote_server_buf]
-        
-        # Initialize RFM2Pi
-        # (force_RFM2Pi_update will force RFM2Pi parameters to be sent)
+        # Update settigns (emoncms server buffers and RFM2Pi)
+        # (force_RFM2Pi_update forces RFM2Pi parameters to be sent)
         self._update_settings(force_RFM2Pi_update=True)
     
     def run(self):
@@ -279,11 +279,11 @@ class RFM2PiGateway():
             
                         # Add data to send buffers
                         values.insert(0,node)
-                        for server_buf in self._server_buffers:
+                        for server_buf in self._server_buffers.itervalues():
                             server_buf.add_data(values)
             
             # Send data if time has come
-            for server_buf in self._server_buffers:
+            for server_buf in self._server_buffers.itervalues():
                 if server_buf.check_time():
                     if server_buf.has_data():
                         server_buf.send_data()
@@ -385,23 +385,45 @@ class RFM2PiGateway():
         
         # Get settings from DB
         s_new = self._db_query("SELECT * FROM raspberrypi").fetchone()
-        
+
         # If s_new is None, DB connection failed
         if s_new is None:
             self.log.warning("Database error. Cannot update settings.")
             return
-        
+
         # RFM2Pi settings
         for param in ['baseid', 'frequency', 'sgroup']:
             if ((s_new[param] != self._settings[param]) or force_RFM2Pi_update):
                 self._set_rfm2pi_setting(param,str(s_new[param]))
-            
+
         # Server settings
-        self._local_server_buf.update_settings(apikey=self._settings['apikey'])
+        if 'local' not in self._server_buffers:
+            self._server_buffers['local'] = ServerDataBuffer(
+                    gateway = self,
+                    domain = 'localhost',
+                    path = '/emoncms', 
+                    apikey = s_new['apikey'], 
+                    period = 0, 
+                    active = True)
+        else:
+            self._server_buffers['local'].update_settings(
+                    apikey=s_new['apikey'],
+                    active=True)
         
-        self._remote_server_buf.update_settings(domain=self._settings['remotedomain'],
-                                                path=self._settings['remotepath'],
-                                                apikey=self._settings['remoteapikey'])
+        if 'remote' not in self._server_buffers:
+            self._server_buffers['remote'] = ServerDataBuffer(
+                    gateway = self,
+                    domain = s_new['remotedomain'], 
+                    path = s_new['remotepath'],
+                    apikey = s_new['remoteapikey'],
+                    period = 30,
+                    active = s_new['remoteapikey'])
+        else: 
+            self._server_buffers['remote'].update_settings(
+                    domain=s_new['remotedomain'],
+                    path=s_new['remotepath'],
+                    apikey=s_new['remoteapikey'],
+                    active=s_new['remotesend'])
         
         self._settings = s_new
     
