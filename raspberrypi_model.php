@@ -30,7 +30,7 @@ class RaspberryPI
 
         if (!$row)
         {
-            $this->mysqli->query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remotepath, remoteapikey, remotesend) VALUES ( '0' , '' ,'1','4','15' ,'http://emoncms.org','','YOURAPIKEY','false');");
+            $this->mysqli->query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remoteprotocol, remotepath, remoteapikey, remotesend) VALUES ( '0' , '' ,'1','4','15' ,'emoncms.org','','YOURAPIKEY','false');");
             $result = $this->mysqli->query("SELECT * FROM raspberrypi");
             $row = $result->fetch_object();
         }
@@ -42,8 +42,8 @@ class RaspberryPI
         $fields = json_decode($fields);
 
         $remotesend = false;
-        if ($fields->remotedomain && $fields->remoteapikey && $fields->remotepath) {
-            $result = file_get_contents($fields->remotedomain.$fields->remotepath."/time/local.json?apikey=".$fields->remoteapikey); 
+        if ($fields->remoteprotocol && $fields->remotedomain && $fields->remoteapikey && $fields->remotepath) {
+            $result = file_get_contents($fields->remoteprotocol.$fields->remotedomain.$fields->remotepath."/time/local.json?apikey=".$fields->remoteapikey); 
             if ($result[0]=='t') $remotesend = true;
         }
 
@@ -59,6 +59,7 @@ class RaspberryPI
         $array[] = "`baseid` = '".intval($fields->baseid)."'";
         $array[] = "`remotedomain` = '".urldecode($fields->remotedomain)."'";
 
+        $array[] = "`remoteprotocol` = '".$fields->remoteprotocol."'";
         if($fields->remotepath[0]!='/') {$fields->remotepath='/'.$fields->remotepath;}  // ensure leading slash in remotepath
         $array[] = "`remotepath` = '".$fields->remotepath."'";
         $array[] = "`remoteapikey` = '".($this->mysqli->real_escape_string(preg_replace('/[^.\/A-Za-z0-9]/', '', $fields->remoteapikey)))."'";
