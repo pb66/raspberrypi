@@ -71,7 +71,7 @@
   $remoteapikey = $settings->remoteapikey;
 
   $sent_to_remote = false;
-  $result = file_get_contents("http://".$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
+  $result = file_get_contents($remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
   if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
 
   // Create a stream context that configures the serial port
@@ -125,7 +125,7 @@
 
         if ($settings->remotedomain !=$remotedomain || $settings->remoteapikey !=$remoteapikey || $settings->remotepath !=$remotepath)
         { 
-          $result = file_get_contents("http://".$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
+          $result = file_get_contents($remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
           if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
         }
 
