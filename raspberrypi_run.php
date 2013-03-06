@@ -31,33 +31,44 @@
     const HISTOGRAM = 3;
   }
 
-  require "../../settings.php";
-  include "../../db.php";
-  db_connect();
+  // 1) Load settings and core scripts
+  require "../../process_settings.php";
+  // 2) Database
+  $mysqli = new mysqli($server,$username,$password,$database);
+
+  // 3) User sessions
+  require("../user/user_model.php");
+  $user = new User($mysqli);
+
+  require "../feed/feed_model.php";
+  $feed = new Feed($mysqli);
+
+  require "../input/input_model.php";
+  $input = new Input($mysqli,$feed);
+
+  require "../input/process_model.php";
+  $process = new Process($mysqli,$input,$feed);
 
   include "raspberrypi_model.php";
-  include "../user/user_model.php";
-  include "../input/input_model.php";
-  include "../feed/feed_model.php";
-  include "../input/process_model.php";
-  raspberrypi_running();
+  $raspberrypi = new RaspberryPI($mysqli);
 
-  $settings = raspberrypi_get();
-  $apikey = $settings['apikey'];
-  $userid = get_apikey_write_user($apikey);
+  $raspberrypi->set_running();
+
+  $settings = $raspberrypi->get();
+  $apikey = $settings->apikey;
+  $userid = $settings->userid;
 
   $session = array();
   $session['userid'] = $userid;
-
   if ($userid == 0) $userid = 1;
 
-  $group = $settings['sgroup'];
-  $frequency = $settings['frequency'];
-  $baseid = $settings['baseid'];
+  $group = $settings->sgroup;
+  $frequency = $settings->frequency;
+  $baseid = $settings->baseid;
 
-  $remotedomain = $settings['remotedomain'];
-  $remotepath = $settings['remotepath'];
-  $remoteapikey = $settings['remoteapikey'];
+  $remotedomain = $settings->remotedomain;
+  $remotepath = $settings->remotepath;
+  $remoteapikey = $settings->remoteapikey;
 
   $sent_to_remote = false;
   $result = file_get_contents("http://".$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
@@ -106,22 +117,19 @@
       {
         $start = time();
 
-        $settings = raspberrypi_get();
-        if ($settings['apikey'] !=$apikey) {
-          $apikey = $settings['apikey'];
-          $userid = get_apikey_write_user($apikey);
-        }
-        if ($settings['sgroup'] !=$group) {$group = $settings['sgroup']; fprintf($f,$group."g");}
-        if ($settings['frequency'] !=$frequency) {$frequency = $settings['frequency']; fprintf($f,$frequency."b"); }
-        if ($settings['baseid'] !=$baseid) {$baseid = $settings['baseid']; fprintf($f,$baseid."i");}
+        $settings = $raspberrypi->get();
+        $userid = $settings->userid;
+        if ($settings->sgroup !=$group) {$group = $settings->sgroup; fprintf($f,$group."g");}
+        if ($settings->frequency !=$frequency) {$frequency = $settings->frequency; fprintf($f,$frequency."b"); }
+        if ($settings->baseid !=$baseid) {$baseid = $settings->baseid; fprintf($f,$baseid."i");}
 
-        if ($settings['remotedomain'] !=$remotedomain || $settings['remoteapikey'] !=$remoteapikey || $settings['remotepath'] !=$remotepath)
+        if ($settings->remotedomain !=$remotedomain || $settings->remoteapikey !=$remoteapikey || $settings->remotepath !=$remotepath)
         { 
           $result = file_get_contents("http://".$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
           if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
         }
 
-        raspberrypi_running();
+        $raspberrypi->set_running();
 
         // Forward data to remote emoncms
 
@@ -149,12 +157,17 @@
           $values = explode(' ',$data);
           if ($values && is_numeric($values[1]))
           {
-            $node = $values[1];
+
+            $dbinputs = $input->get_inputs($userid);
+
+            $nodeid = (int) $values[1];
             $msubs = "";
             $nameid = 1;
 
-            $inputs = array();
+            // Next we set the time that the packet was recieved
+            $time = time();
 
+            $tmp = array();
             for($i=2; $i<(count($values)-1); $i+=2){
               if ($i>2) $msubs .= ",";
 
@@ -169,37 +182,25 @@
               $msubs .= $int16;
               $value = $int16;
 
-              // Next we set the time that the packet was recieved
-              $time = time();
+              $name = $nameid;
 
-              // Create multinode type input name
-              // We're using the multinode input name convention
-              // which is of the form node10_1, node10_2
-              $name = "node".$node.'_'.$nameid;
-
-              // Check if input exists and get its id
-              $id = get_input_id($userid,$name);
-
-              if ($id==0) {
-                // If the input does not exist then create it
-                $id = create_input_timevalue($userid,$name,$node,$time,$value);
-              } else {	
-                // If it does exist then set the timevalue			
-                set_input_timevalue($id,$time,$value);
+              if (!isset($dbinputs[$nodeid][$name])) {
+                $input->create_input($session['userid'], $nodeid, $name);
+                $dbinputs[$nodeid][$name] = true;
+              } else { 
+                if ($dbinputs[$nodeid][$name]['record']) $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
+                if ($dbinputs[$nodeid][$name]['processList']) $tmp[] = array('value'=>$value,'processList'=>$dbinputs[$nodeid][$name]['processList']);
               }
-              // Put in input list ready for processing
-              $inputs[] = array('id'=>$id,'time'=>$time,'value'=>$value);
+
               $nameid++;
             }
-
-            // Run the input processor (new to call new version of the input processor..)
-            new_process_inputs($userid,$inputs);
+            foreach ($tmp as $i) $process->input($time,$i['value'],$i['processList']);
 
             if ($sent_to_remote == true)
             {
               if ($ni!=0) $remotedata .= ",";
               $td = intval(time() - $start_time);
-              $remotedata .= '['.$td.','.$values[1].','.$msubs.']'; $ni++;
+              $remotedata .= '['.$td.','.$nodeid.','.$msubs.']'; $ni++;
             }
 
           }
