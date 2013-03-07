@@ -27,10 +27,10 @@ class RaspberryPI
     {
         $result = $this->mysqli->query("SELECT * FROM raspberrypi");
         $row = $result->fetch_object();
-
-        if (!$row)
+       
+        if ($result->num_rows==0)
         {
-            $this->mysqli->query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remoteprotocol, remotepath, remoteapikey, remotesend) VALUES ( '0' , '' ,'1','4','15' ,'emoncms.org','','YOURAPIKEY','false');");
+            $this->mysqli->query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remoteprotocol, remotepath, remoteapikey, remotesend) VALUES ( '0' , '' ,'1','4','15' ,'emoncms.org','http://','/','YOURAPIKEY','false');");
             $result = $this->mysqli->query("SELECT * FROM raspberrypi");
             $row = $result->fetch_object();
         }
