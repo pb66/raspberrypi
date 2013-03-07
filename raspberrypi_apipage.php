@@ -23,7 +23,7 @@
 <p><a href="<?php echo $path; ?>raspberrypi/set.json?fields={'sgroup':210,'frequency':4,'baseid':15,'remoteprotocol':'http://','remotedomain':'emoncms.org','remotepath':'/','remoteapikey':'REMOTE_APIKEY'}"><?php echo $path; ?>raspberrypi/set.json?fields=<br>{'sgroup':210,'frequency':4,'baseid':15,'remoteprotocol':'http://','remotedomain':'emoncms.org','remotepath':'/','remoteapikey':'REMOTE_APIKEY'}</a><br>returns confirmation if settings given for remote server are correct. Requires write apikey.</p>
 
 <p><b>Get settings</b></p>
-<p><a href="<?php echo $path; ?>raspberrypi/get.json"><?php echo $path; ?>raspberrypi/get.json</a> - returns raspberrypi settings. Requires read apikey.</p>
+<p><a href="<?php echo $path; ?>raspberrypi/get.json"><?php echo $path; ?>raspberrypi/get.json</a> - returns raspberrypi settings. Requires read apikey <b>OR a request from localhost ip address 127.0.0.1</b></p>
 
 <p><b>Check if run script is running</b></p>
 <p><a href="<?php echo $path; ?>raspberrypi/running.json"><?php echo $path; ?>raspberrypi/running.json</a> - returns true if raspberrypi_run script is running. Requires read apikey.</p>
