@@ -1,5 +1,5 @@
 <?php
 
-  $menu_left[] = array('name'=>"Raspberry PI", 'path'=>"raspberrypi/view" , 'session'=>"write", 'order' => -1 );
+  $menu_left[] = array('name'=>"Raspberry PI", 'path'=>"raspberrypi/config" , 'session'=>"write", 'order' => -1 );
 
 ?>

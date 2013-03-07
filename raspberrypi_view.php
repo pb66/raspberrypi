@@ -25,8 +25,11 @@
 <div id="not-running"  class="alert alert-important hide">
   No data has been recieved from the RFM12PI in the last 30s. Check if the PI interface script is running, if not you may need to configure cron
 </div>
-
+<br><div style="float:right;"><a href="api">RaspberryPI API Help</a></div>
 <h2>Raspberry PI</h2>
+
+
+
 <form id="testform">
   <div style="width:400px; float:left;">
     <p><b>Raspberry Pi connected to emoncms user account: <?php echo ""; $user->get_username($settings->userid); ?></b></p>

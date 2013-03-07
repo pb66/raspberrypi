@@ -24,7 +24,8 @@ function raspberrypi_controller()
     // html views
     if ($route->format == 'html')
     {
-        if ($route->action == "view" && $session['write']) $result = view("Modules/raspberrypi/raspberrypi_view.php", array('settings'=>$raspberrypi->get()));
+        if ($route->action == "config" && $session['write']) $result = view("Modules/raspberrypi/raspberrypi_view.php", array('settings'=>$raspberrypi->get()));
+        if ($route->action == "api" && $session['write']) $result = view("Modules/raspberrypi/raspberrypi_apipage.php", array());
     }
 
     // JSON api
