@@ -14,8 +14,8 @@
 
 """
 TODO : 
-- make remote server optional
 - add new parameters instead of hardcoding (log level, sending interval...)
+- allow https
 - allow any number of servers (instead of hardcoding 1 local and 1 remote) ?
 """
 
@@ -27,7 +27,6 @@ import logging, logging.handlers
 import re
 import signal
 import os
-import ConfigParser
 
 """class ServerDataBuffer
 
@@ -73,7 +72,7 @@ class ServerDataBuffer():
         data (list): node and values (eg: '[node,val1,val2,...]')
 
         """
-        
+       
         if not self._active:
             return
         
@@ -165,7 +164,7 @@ class RFM2PiGateway():
         """Setup an RFM2Pi gateway."""
 
         # Store PID in a file to allow SIGINTability
-        with open('PID', 'w') as f:
+        with open('rfm2pigateway/PID', 'w') as f:
             f.write(str(os.getpid()))
 
         # Set signal handler to catch SIGINT and shutdown gracefully
@@ -174,20 +173,18 @@ class RFM2PiGateway():
         
         # Initialize logging
         self.log = logging.getLogger('MyLog')
-        logfile = logging.handlers.RotatingFileHandler('./rfm2pigateway.log', 'a', 50 * 1024, 1)
+        logfile = logging.handlers.RotatingFileHandler('rfm2pigateway/rfm2pigateway.log', 'a', 50 * 1024, 1)
         logfile.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
         self.log.addHandler(logfile)
         self.log.setLevel(logging.DEBUG)
         
-        # Initialize DB configuration
-        self._db_config = ConfigParser.RawConfigParser()
-
-        # Fetch settings from DB
-        self._settings = self._db_get_settings()
-        # If DB connexion fails, exit
+        # Fetch settings
+        self._settings = self._get_settings()
+        
+        # If settings can't be obtained, exit
         if self._settings is None:
-            self.log.error("Connexion to DB failed. Exiting...")
-            raise Exception('Connexion to DB failed.')
+            self.log.error("Coudln't get settings.")
+            raise Exception("Coudln't get settings.")
         self._status_update_timestamp = 0
         self._time_update_timestamp = 0
         
@@ -221,7 +218,7 @@ class RFM2PiGateway():
             # Update settings and status every second
             now = time.time()
             if (now - self._status_update_timestamp > 1):
-                # Update status in DB to inform emoncms the script is running
+                # Update "running" status to inform emoncms the script is running
                 self._raspberrypi_running()
                 # Update settings
                 self._update_settings()
@@ -306,7 +303,7 @@ class RFM2PiGateway():
 
         # Delete PID file
         try:
-            os.remove('PID')
+            os.remove('rfm2pigateway/PID')
         except OSError:
             pass
         
@@ -319,49 +316,26 @@ class RFM2PiGateway():
         # gateway should exit at the end of current iteration.
         self._exit = True
 
-    def _db_query(self, SQLQuery):
-        """Connect to the database and execute a query
-        
-        SQLQuery (string): SQL query to execute
-
-        Returns the result in the form of a cursor of type dictionnary
-
-        """
-        
-        # Read DB connection parameters from config file
-        self._db_config.read('../../settings.ini')
-        try:
-            host=self._db_config.get('database', 'server')
-            user=self._db_config.get('database', 'username')
-            password=self._db_config.get('database', 'password')
-            database=self._db_config.get('database', 'database')
-        except Exception:
-            self.log.error('Missing database config parameter in settings.ini.')
-            return
-        
-        # Connect to database and execture query
-        db = None
-        try:
-            db = MySQLdb.connect(host,user,password,database,
-                                 cursorclass=MySQLdb.cursors.DictCursor)
-            cur = db.cursor()
-            cur.execute(SQLQuery)
-            db.commit()
-        except MySQLdb.Error as e:
-            self.log.error("Error %d: %s" % (e.args[0],e.args[1]))
-            return
-        db.close()
-        return cur
-    
-    def _db_get_settings(self):
-        """Fetch settings in the database
+    def _get_settings(self):
+        """Get settings through php interface
         
         Returns a dictionnary
 
         """
-        cur = self._db_query("SELECT * FROM raspberrypi")
-        if cur:
-            return cur.fetchone()
+        try:
+            result = urllib2.urlopen("http://localhost/emoncms/Modules/raspberrypi/rfm2pigateway_interface.php?action=params")
+            settings = {}
+            for l in result:
+                # Each line, except for empty lines, should be of the form
+                # param:value
+                l = l.strip().split(':')
+                if not (l == ['']):
+                    settings[l[0]] = l[1]
+            return settings
+        except Exception:
+            import traceback
+            self.log.warning("Couldn't get settings, Exception: " + traceback.format_exc())
+            return
 
     def _set_rfm2pi_setting(self, setting, value):
         """Send a configuration parameter to the RFM2Pi through COM port.
@@ -382,19 +356,19 @@ class RFM2PiGateway():
         time.sleep(1);
     
     def _update_settings(self, force_RFM2Pi_update=False):
-        """Check settings in DB and update if needed.
+        """Check settings and update if needed.
         
         force_RFM2Pi_update (boolean): if True, all settings are sent, 
         whether or not they were modified.
 
         """
         
-        # Get settings from DB
-        s_new = self._db_query("SELECT * FROM raspberrypi").fetchone()
+        # Get settings
+        s_new = self._get_settings()
 
-        # If s_new is None, DB connection failed
+        # If s_new is None, no answer to settings request
         if s_new is None:
-            self.log.warning("Database error. Cannot update settings.")
+            self.log.warning("Can't update settings.")
             return
 
         # RFM2Pi settings
@@ -413,8 +387,7 @@ class RFM2PiGateway():
                     active = True)
         else:
             self._server_buffers['local'].update_settings(
-                    apikey=s_new['apikey'],
-                    active=True)
+                    apikey = s_new['apikey'])
         
         if 'remote' not in self._server_buffers:
             self._server_buffers['remote'] = ServerDataBuffer(
@@ -423,13 +396,13 @@ class RFM2PiGateway():
                     path = s_new['remotepath'],
                     apikey = s_new['remoteapikey'],
                     period = 30,
-                    active = s_new['remoteapikey'])
+                    active = int(s_new['remotesend']))
         else: 
             self._server_buffers['remote'].update_settings(
-                    domain=s_new['remotedomain'],
-                    path=s_new['remotepath'],
-                    apikey=s_new['remoteapikey'],
-                    active=s_new['remotesend'])
+                    domain = s_new['remotedomain'],
+                    path = s_new['remotepath'],
+                    apikey = s_new['remoteapikey'],
+                    active = int(s_new['remotesend']))
         
         self._settings = s_new
     
@@ -450,13 +423,15 @@ class RFM2PiGateway():
         else:
             return ser
 
-
     def _raspberrypi_running(self):
-        """Update "script running" status in DB."""
-
-        return self._db_query("UPDATE raspberrypi SET running = '%s'" % str(int(time.time())))
-
-    
+        """Update "script running" status through php interface."""
+        
+        try:
+            result = urllib2.urlopen("http://localhost/emoncms/Modules/raspberrypi/rfm2pigateway_interface.php?action=running")
+        except Exception:
+            import traceback
+            self.log.warning("Couldn't update \"running\" status, Exception: " + traceback.format_exc())
+           
     def _send_time(self):
         """Send time over radio link to synchronize emonGLCD."""
 
