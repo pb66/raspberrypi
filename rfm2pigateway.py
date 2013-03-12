@@ -164,7 +164,9 @@ class RFM2PiGateway():
         """Setup an RFM2Pi gateway."""
 
         # Store PID in a file to allow SIGINTability
-        with open('rfm2pigateway/PID', 'w') as f:
+        with open(os.path.join(os.path.dirname(__file__), 
+                               'rfm2pigateway/PID'),
+                  'w') as f:
             f.write(str(os.getpid()))
 
         # Set signal handler to catch SIGINT and shutdown gracefully
@@ -173,7 +175,10 @@ class RFM2PiGateway():
         
         # Initialize logging
         self.log = logging.getLogger('MyLog')
-        logfile = logging.handlers.RotatingFileHandler('rfm2pigateway/rfm2pigateway.log', 'a', 50 * 1024, 1)
+        logfile = logging.handlers.RotatingFileHandler(
+            os.path.join(os.path.dirname(__file__), 
+                         'rfm2pigateway/rfm2pigateway.log'),
+            'a', 5000 * 1024, 1)
         logfile.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
         self.log.addHandler(logfile)
         self.log.setLevel(logging.DEBUG)
@@ -183,8 +188,8 @@ class RFM2PiGateway():
         
         # If settings can't be obtained, exit
         if self._settings is None:
-            self.log.critical("Coudln't get settings.")
-            raise Exception("Coudln't get settings.")
+            self.log.critical("Couldn't get settings.")
+            raise Exception("Couldn't get settings.")
         self._status_update_timestamp = 0
         self._time_update_timestamp = 0
         
@@ -303,7 +308,8 @@ class RFM2PiGateway():
 
         # Delete PID file
         try:
-            os.remove('rfm2pigateway/PID')
+            os.remove(os.path.join(os.path.dirname(__file__), 
+                                   'rfm2pigateway/PID'))
         except OSError:
             pass
         
