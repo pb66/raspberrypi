@@ -126,9 +126,9 @@ class ServerDataBuffer():
             self._gateway.log.warning("Couldn't send to server, Exception: " + traceback.format_exc())
         else:
             if (result.readline() == 'ok'):
-                self._gateway.log.info("ok")
+                self._gateway.log.info("Send ok")
             else:
-                self._gateway.log.info("fail")
+                self._gateway.log.warning("Send failure")
         
         # Update _last_send
         self._last_send = time.time()
@@ -183,7 +183,7 @@ class RFM2PiGateway():
         
         # If settings can't be obtained, exit
         if self._settings is None:
-            self.log.error("Coudln't get settings.")
+            self.log.critical("Coudln't get settings.")
             raise Exception("Coudln't get settings.")
         self._status_update_timestamp = 0
         self._time_update_timestamp = 0
@@ -191,7 +191,7 @@ class RFM2PiGateway():
         # Open serial port
         self._ser = self._open_serial_port()
         if self._ser is None:
-            self.log.error("COM port opening failed. Exiting...")
+            self.log.critical("COM port opening failed. Exiting...")
             raise Exception('COM port opening failed.')
         
         # Initialize serial RX buffer
@@ -368,7 +368,6 @@ class RFM2PiGateway():
 
         # If s_new is None, no answer to settings request
         if s_new is None:
-            self.log.warning("Can't update settings.")
             return
 
         # RFM2Pi settings
@@ -418,7 +417,7 @@ class RFM2PiGateway():
         except Exception:
             import traceback
             self.log.error(
-                "Couldn't send to server, Exception: " 
+                "Couldn't open serial port, Exception: " 
                 + traceback.format_exc())
         else:
             return ser
