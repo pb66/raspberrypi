@@ -184,20 +184,11 @@ class RFM2PiGateway():
         self.log.addHandler(logfile)
         self.log.setLevel(logging.DEBUG)
         
-        # Fetch settings
-        self._settings = self._get_settings()
-        
-        # If settings can't be obtained, exit
-        if self._settings is None:
-            self.log.critical("Couldn't get settings.")
-            raise Exception("Couldn't get settings.")
-        self._status_update_timestamp = 0
-        self._time_update_timestamp = 0
-        
         # Open serial port
         self._ser = self._open_serial_port()
         if self._ser is None:
             self.log.critical("COM port opening failed. Exiting...")
+            self.close()
             raise Exception('COM port opening failed.')
         
         # Initialize serial RX buffer
@@ -206,10 +197,21 @@ class RFM2PiGateway():
         # Initialize target emoncms server buffer set
         self._server_buffers = {}
         
-        # Update settigns (emoncms server buffers and RFM2Pi)
+        # Declare timers
+        self._status_update_timestamp = 0
+        self._time_update_timestamp = 0
+
+        # Get emoncms server buffers and RFM2Pi settings
         # (force_RFM2Pi_update forces RFM2Pi parameters to be sent)
-        self._update_settings(force_RFM2Pi_update=True)
+        self._settings = None
+        self._update_settings()
     
+        # If settings can't be obtained, exit
+        if self._settings is None:
+            self.log.critical("Couldn't get settings.")
+            self.close()
+            raise Exception("Couldn't get settings.")
+        
     def run(self):
         """Launch the gateway.
         
@@ -304,8 +306,9 @@ class RFM2PiGateway():
         """Close gateway. Do some cleanup before leaving."""
         
         # Close serial port
-        self.log.debug("Closing serial port.")
-        self._ser.close()
+        if self._ser is not None:
+            self.log.debug("Closing serial port.")
+            self._ser.close()
 
         # Delete PID file
         try:
@@ -369,13 +372,8 @@ class RFM2PiGateway():
             self._ser.write(value+'g')
         time.sleep(1);
     
-    def _update_settings(self, force_RFM2Pi_update=False):
-        """Check settings and update if needed.
-        
-        force_RFM2Pi_update (boolean): if True, all settings are sent, 
-        whether or not they were modified.
-
-        """
+    def _update_settings(self):
+        """Check settings and update if needed."""
         
         # Get settings
         s_new = self._get_settings()
@@ -384,10 +382,17 @@ class RFM2PiGateway():
         if s_new is None:
             return
 
-        # RFM2Pi settings
-        for param in ['baseid', 'frequency', 'sgroup']:
-            if ((s_new[param] != self._settings[param]) or force_RFM2Pi_update):
+        # If self._settings is None, this is the first call
+        # Send all RFM2Pi settings
+        if self._settings is None:
+            for param in ['baseid', 'frequency', 'sgroup']:
                 self._set_rfm2pi_setting(param,str(s_new[param]))
+
+        # General case, send RFM2Pi settings only if they changed
+        else:
+            for param in ['baseid', 'frequency', 'sgroup']:
+                if ((s_new[param] != self._settings[param])):
+                    self._set_rfm2pi_setting(param,str(s_new[param]))
 
         # Server settings
         if 'local' not in self._server_buffers:
