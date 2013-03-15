@@ -35,7 +35,8 @@ function raspberrypi_controller()
     {
         if ($route->action == "set" && $session['write']) $result = $raspberrypi->set($session['userid'],$user->get_apikey_write($session['userid']),get('fields'));
         if ($route->action == "get" && ($session['read'] || $_SERVER['REMOTE_ADDR']=='127.0.0.1')) $result = $raspberrypi->get();
-        if ($route->action == "running" && $session['read']) $result = $raspberrypi->get_running();
+        if ($route->action == "setrunning" && ($session['write'] || $_SERVER['REMOTE_ADDR']=='127.0.0.1')) $result = $raspberrypi->set_running();
+        if ($route->action == "getrunning" && $session['read']) $result = $raspberrypi->get_running();
     }
 
     return array('content'=>$result);

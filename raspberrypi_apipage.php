@@ -26,4 +26,8 @@
 <p><a href="<?php echo $path; ?>raspberrypi/get.json"><?php echo $path; ?>raspberrypi/get.json</a> - returns raspberrypi settings. Requires read apikey <b>OR a request from localhost ip address 127.0.0.1</b></p>
 
 <p><b>Check if run script is running</b></p>
-<p><a href="<?php echo $path; ?>raspberrypi/running.json"><?php echo $path; ?>raspberrypi/running.json</a> - returns true if raspberrypi_run script is running. Requires read apikey.</p>
+<p><a href="<?php echo $path; ?>raspberrypi/getrunning.json"><?php echo $path; ?>raspberrypi/getrunning.json</a> - returns true if raspberrypi_run script is running. Requires read apikey.</p>
+
+<p><b>Inform EmonCMS that run script is running</b></p>
+<p><a href="<?php echo $path; ?>raspberrypi/setrunning.json"><?php echo $path; ?>raspberrypi/setrunning.json</a> - returns Null. Requires write apikey <b>OR a request from localhost ip address 127.0.0.1</b>.</p>
+

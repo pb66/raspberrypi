@@ -27,6 +27,7 @@ import logging, logging.handlers
 import re
 import signal
 import os
+import csv
 
 """class ServerDataBuffer
 
@@ -323,21 +324,28 @@ class RFM2PiGateway():
         self._exit = True
 
     def _get_settings(self):
-        """Get settings through php interface
+        """Get settings
         
         Returns a dictionnary
 
         """
         try:
-            result = urllib2.urlopen("http://localhost/emoncms/Modules/raspberrypi/rfm2pigateway_interface.php?action=params")
+            result = urllib2.urlopen("http://localhost/emoncms/raspberrypi/get.json")
+            result = result.readline()
+            # result is of the form
+            # {"userid":"1","sgroup":"210",...,"remoteprotocol":"http:\\/\\/"}
+            result = result[1:-1].split(',')
+            # result is now of the form
+            # ['"userid":"1"',..., '"remoteprotocol":"http:\\/\\/"']
             settings = {}
-            for l in result:
-                # Each line, except for empty lines, should be of the form
-                # param:value
-                l = l.strip().split(':')
-                if not (l == ['']):
-                    settings[l[0]] = l[1]
+            # For each setting, separate key and value
+            for s in result:
+                # We can't just use split(':') as there can be ":" inside a value 
+                # (eg: "http://")
+                s = csv.reader([s], delimiter=':').next() 
+                settings[s[0]] = s[1].replace("\\","")
             return settings
+
         except Exception:
             import traceback
             self.log.warning("Couldn't get settings, Exception: " + traceback.format_exc())
@@ -429,10 +437,10 @@ class RFM2PiGateway():
             return ser
 
     def _raspberrypi_running(self):
-        """Update "script running" status through php interface."""
+        """Update "script running" status."""
         
         try:
-            result = urllib2.urlopen("http://localhost/emoncms/Modules/raspberrypi/rfm2pigateway_interface.php?action=running")
+            result = urllib2.urlopen("http://localhost/emoncms/raspberrypi/setrunning.json")
         except Exception:
             import traceback
             self.log.warning("Couldn't update \"running\" status, Exception: " + traceback.format_exc())
