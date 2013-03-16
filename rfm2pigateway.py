@@ -15,8 +15,8 @@
 """
 TODO : 
 - add new parameters instead of hardcoding (log level, sending interval...)
-- allow https
 - allow any number of servers (instead of hardcoding 1 local and 1 remote) ?
+- save samples for later when connection is down
 """
 
 import serial
@@ -36,7 +36,7 @@ Stores server parameters and buffers the data between two HTTP requests
 """
 class ServerDataBuffer():
 
-    def __init__(self, gateway, domain, path, apikey, period, active):
+    def __init__(self, gateway, protocol, domain, path, apikey, period, active):
         """Create a server data buffer initialized with server settings.
         
         domain (string): domain name (eg: 'domain.tld')
@@ -46,6 +46,7 @@ class ServerDataBuffer():
         
         """
         self._gateway = gateway
+        self._protocol = protocol
         self._domain = domain
         self._path = path
         self._apikey = apikey
@@ -54,8 +55,10 @@ class ServerDataBuffer():
         self._last_send = time.time()
         self._active = active
 
-    def update_settings(self, domain=None, path=None, apikey=None, period=None, active=None):
+    def update_settings(self, protocol=None, domain=None, path=None, apikey=None, period=None, active=None):
         """Update server settings."""
+        if protocol is not None:
+            self._protocol = protocol
         if domain is not None:
             self._domain = domain
         if path is not None:
@@ -107,12 +110,10 @@ class ServerDataBuffer():
         
         # Prepare URL string of the form
         # 'http://domain.tld/emoncms/input/bulk.json?apikey=12345&data=[[-10,10,1806],[-5,10,1806],[0,10,1806]]'
-        url_string = "http://"+self._domain+self._path+"/input/bulk.json?apikey="+self._apikey+"&data="+data_string
+        url_string = self._protocol+self._domain+self._path+"/input/bulk.json?apikey="+self._apikey+"&data="+data_string
         self._gateway.log.debug("URL string: " + url_string)
 
         # Send data to server
-        # TODO : manage failures: currently, data is just lost
-        # We could keep it and retry, and trash after given amount of time/data
         self._gateway.log.info("Sending to " + self._domain + self._path)
         try:
             result = urllib2.urlopen(url_string)
@@ -398,6 +399,7 @@ class RFM2PiGateway():
         if 'local' not in self._server_buffers:
             self._server_buffers['local'] = ServerDataBuffer(
                     gateway = self,
+                    protocol = 'http://',
                     domain = 'localhost',
                     path = '/emoncms', 
                     apikey = s_new['apikey'], 
@@ -410,6 +412,7 @@ class RFM2PiGateway():
         if 'remote' not in self._server_buffers:
             self._server_buffers['remote'] = ServerDataBuffer(
                     gateway = self,
+                    protocol = s_new['remoteprotocol'], 
                     domain = s_new['remotedomain'], 
                     path = s_new['remotepath'],
                     apikey = s_new['remoteapikey'],
@@ -417,6 +420,7 @@ class RFM2PiGateway():
                     active = int(s_new['remotesend']))
         else: 
             self._server_buffers['remote'].update_settings(
+                    protocol = s_new['remoteprotocol'], 
                     domain = s_new['remotedomain'],
                     path = s_new['remotepath'],
                     apikey = s_new['remoteapikey'],
