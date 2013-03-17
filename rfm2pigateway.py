@@ -162,27 +162,25 @@ emoncms servers through ServerDataBuffer instances.
 """
 class RFM2PiGateway():
     
-    def __init__(self):
+    def __init__(self, logpath=None):
         """Setup an RFM2Pi gateway."""
 
-        # Store PID in a file to allow SIGINTability
-        with open(os.path.join(os.path.dirname(__file__), 
-                               'rfm2pigateway/PID'),
-                  'w') as f:
-            f.write(str(os.getpid()))
-
-        # Set signal handler to catch SIGINT and shutdown gracefully
+       # Set signal handler to catch SIGINT and shutdown gracefully
         self._exit = False
         signal.signal(signal.SIGINT, self._sigint_handler)
         
         # Initialize logging
         self.log = logging.getLogger('MyLog')
-        logfile = logging.handlers.RotatingFileHandler(
-            os.path.join(os.path.dirname(__file__), 
-                         'rfm2pigateway/rfm2pigateway.log'),
-            'a', 5000 * 1024, 1)
-        logfile.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-        self.log.addHandler(logfile)
+        if (logpath is None):
+            # If no path was specified, everything goes to sys.stderr
+            loghandler = logging.StreamHandler()
+        else:
+            # Otherwise, rotating logging over two 5 MB files
+            loghandler = logging.handlers.RotatingFileHandler(logpath,
+                                                           'a', 5000 * 1024, 1)
+        loghandler.setFormatter(logging.Formatter(
+                '%(asctime)s %(levelname)s %(message)s'))
+        self.log.addHandler(loghandler)
         self.log.setLevel(logging.DEBUG)
         
         # Open serial port
@@ -301,7 +299,7 @@ class RFM2PiGateway():
                         server_buf.send_data()
         
             # Sleep until next iteration
-            time.sleep(1);
+            time.sleep(0.2);
          
     def close(self):
         """Close gateway. Do some cleanup before leaving."""
@@ -311,14 +309,8 @@ class RFM2PiGateway():
             self.log.debug("Closing serial port.")
             self._ser.close()
 
-        # Delete PID file
-        try:
-            os.remove(os.path.join(os.path.dirname(__file__), 
-                                   'rfm2pigateway/PID'))
-        except OSError:
-            pass
-        
         self.log.info("Exiting...")
+        logging.shutdown()
 
     def _sigint_handler(self, signal, frame):
         """Catch SIGINT (Ctrl+C)."""
@@ -466,11 +458,22 @@ class RFM2PiGateway():
 
 if __name__ == "__main__":
 
+    # Store PID in a file to allow SIGINTability
+    with open(os.path.join(os.path.dirname(__file__), 'rfm2pigateway/PID'),
+              'w') as f:
+        f.write(str(os.getpid()))
+
+    # Create, run, and close RFM2Pi Gateway instance
+    logpath = os.path.join(os.path.dirname(__file__), 
+                           'rfm2pigateway/rfm2pigateway.log')
     try:
-        gateway = RFM2PiGateway()
+        gateway = RFM2PiGateway(logpath)
     except Exception as e:
         print(e)
     else:    
         gateway.run()
         gateway.close()
-
+    finally:
+        # Delete PID file
+        os.remove(os.path.join(os.path.dirname(__file__), 'rfm2pigateway/PID'))
+ 
