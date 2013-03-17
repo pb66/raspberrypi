@@ -28,6 +28,7 @@ import re
 import signal
 import os
 import csv
+import argparse
 
 """class ServerDataBuffer
 
@@ -138,7 +139,7 @@ class ServerDataBuffer():
     def check_time(self):
         """Check if it is time to send data to server.
         
-        return True if sending interval has passed since last time
+        Return True if sending interval has passed since last time
 
         """
         now = time.time()
@@ -163,12 +164,16 @@ emoncms servers through ServerDataBuffer instances.
 class RFM2PiGateway():
     
     def __init__(self, logpath=None):
-        """Setup an RFM2Pi gateway."""
-
-       # Set signal handler to catch SIGINT and shutdown gracefully
-        self._exit = False
-        signal.signal(signal.SIGINT, self._sigint_handler)
+        """Setup an RFM2Pi gateway.
         
+        logpath (path): Path to the file the log should be written into.
+            If Null, log to STDERR.
+
+        """
+
+        # Initialize exit request flag
+        self._exit = False
+
         # Initialize logging
         self.log = logging.getLogger('MyLog')
         if (logpath is None):
@@ -219,6 +224,9 @@ class RFM2PiGateway():
 
         """
 
+       # Set signal handler to catch SIGINT and shutdown gracefully
+        signal.signal(signal.SIGINT, self._sigint_handler)
+        
         # Until asked to stop
         while not self._exit:
             
@@ -319,7 +327,7 @@ class RFM2PiGateway():
         # gateway should exit at the end of current iteration.
         self._exit = True
 
-    def _get_settings(self):
+    def get_settings(self):
         """Get settings
         
         Returns a dictionnary
@@ -369,7 +377,7 @@ class RFM2PiGateway():
         """Check settings and update if needed."""
         
         # Get settings
-        s_new = self._get_settings()
+        s_new = self.get_settings()
 
         # If s_new is None, no answer to settings request
         if s_new is None:
@@ -458,22 +466,42 @@ class RFM2PiGateway():
 
 if __name__ == "__main__":
 
-    # Store PID in a file to allow SIGINTability
-    with open(os.path.join(os.path.dirname(__file__), 'rfm2pigateway/PID'),
-              'w') as f:
-        f.write(str(os.getpid()))
+    # Command line arguments parser
+    parser = argparse.ArgumentParser(description='RFM2Pi Gateway')
+    parser.add_argument('--no-log-file', action='store_true',
+        help='log to Standard error stream STDERR (default: log to file)')
+    parser.add_argument('--show-settings', action='store_true',
+        help='show RFM2Pi settings and exit (for debugging purposes)')
+    args = parser.parse_args()
 
+    # Define default logfile unless explicitely told not to
+    if args.no_log_file:
+        logpath = None
+    else:
+        logpath = os.path.join(os.path.dirname(__file__), 
+                               'rfm2pigateway/rfm2pigateway.log')
+    
     # Create, run, and close RFM2Pi Gateway instance
-    logpath = os.path.join(os.path.dirname(__file__), 
-                           'rfm2pigateway/rfm2pigateway.log')
     try:
         gateway = RFM2PiGateway(logpath)
     except Exception as e:
         print(e)
     else:    
-        gateway.run()
+        # If in "Show settings" mode, print RFM2Pi settings and exit
+        if args.show_settings:
+            print(gateway.get_settings())
+        # Else, run normally
+        else:
+            # Store PID in a file to allow SIGINTability
+            with open(os.path.join(os.path.dirname(__file__), 
+                                   'rfm2pigateway/PID'),
+                      'w') as f:
+                f.write(str(os.getpid()))
+            # Run gateway
+            gateway.run()
+            # Delete PID file
+            os.remove(os.path.join(os.path.dirname(__file__),
+                                   'rfm2pigateway/PID'))
+        # When done, close gateway
         gateway.close()
-    finally:
-        # Delete PID file
-        os.remove(os.path.join(os.path.dirname(__file__), 'rfm2pigateway/PID'))
  
