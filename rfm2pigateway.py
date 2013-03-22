@@ -14,9 +14,9 @@
 
 """
 TODO : 
-- make remote server optional
 - add new parameters instead of hardcoding (log level, sending interval...)
 - allow any number of servers (instead of hardcoding 1 local and 1 remote) ?
+- save samples for later when connection is down
 """
 
 import serial
@@ -27,7 +27,8 @@ import logging, logging.handlers
 import re
 import signal
 import os
-import ConfigParser
+import csv
+import argparse
 
 """class ServerDataBuffer
 
@@ -36,7 +37,7 @@ Stores server parameters and buffers the data between two HTTP requests
 """
 class ServerDataBuffer():
 
-    def __init__(self, gateway, domain, path, apikey, period, active):
+    def __init__(self, gateway, protocol, domain, path, apikey, period, active):
         """Create a server data buffer initialized with server settings.
         
         domain (string): domain name (eg: 'domain.tld')
@@ -46,6 +47,7 @@ class ServerDataBuffer():
         
         """
         self._gateway = gateway
+        self._protocol = protocol
         self._domain = domain
         self._path = path
         self._apikey = apikey
@@ -54,8 +56,10 @@ class ServerDataBuffer():
         self._last_send = time.time()
         self._active = active
 
-    def update_settings(self, domain=None, path=None, apikey=None, period=None, active=None):
+    def update_settings(self, protocol=None, domain=None, path=None, apikey=None, period=None, active=None):
         """Update server settings."""
+        if protocol is not None:
+            self._protocol = protocol
         if domain is not None:
             self._domain = domain
         if path is not None:
@@ -73,7 +77,7 @@ class ServerDataBuffer():
         data (list): node and values (eg: '[node,val1,val2,...]')
 
         """
-        
+       
         if not self._active:
             return
         
@@ -107,12 +111,10 @@ class ServerDataBuffer():
         
         # Prepare URL string of the form
         # 'http://domain.tld/emoncms/input/bulk.json?apikey=12345&data=[[-10,10,1806],[-5,10,1806],[0,10,1806]]'
-        url_string = "http://"+self._domain+self._path+"/input/bulk.json?apikey="+self._apikey+"&data="+data_string
+        url_string = self._protocol+self._domain+self._path+"/input/bulk.json?apikey="+self._apikey+"&data="+data_string
         self._gateway.log.debug("URL string: " + url_string)
 
         # Send data to server
-        # TODO : manage failures: currently, data is just lost
-        # We could keep it and retry, and trash after given amount of time/data
         self._gateway.log.info("Sending to " + self._domain + self._path)
         try:
             result = urllib2.urlopen(url_string)
@@ -127,9 +129,9 @@ class ServerDataBuffer():
             self._gateway.log.warning("Couldn't send to server, Exception: " + traceback.format_exc())
         else:
             if (result.readline() == 'ok'):
-                self._gateway.log.info("ok")
+                self._gateway.log.info("Send ok")
             else:
-                self._gateway.log.info("fail")
+                self._gateway.log.warning("Send failure")
         
         # Update _last_send
         self._last_send = time.time()
@@ -137,7 +139,7 @@ class ServerDataBuffer():
     def check_time(self):
         """Check if it is time to send data to server.
         
-        return True if sending interval has passed since last time
+        Return True if sending interval has passed since last time
 
         """
         now = time.time()
@@ -161,40 +163,36 @@ emoncms servers through ServerDataBuffer instances.
 """
 class RFM2PiGateway():
     
-    def __init__(self):
-        """Setup an RFM2Pi gateway."""
-
-        # Store PID in a file to allow SIGINTability
-        with open('PID', 'w') as f:
-            f.write(str(os.getpid()))
-
-        # Set signal handler to catch SIGINT and shutdown gracefully
-        self._exit = False
-        signal.signal(signal.SIGINT, self._sigint_handler)
+    def __init__(self, logpath=None):
+        """Setup an RFM2Pi gateway.
         
+        logpath (path): Path to the file the log should be written into.
+            If Null, log to STDERR.
+
+        """
+
+        # Initialize exit request flag
+        self._exit = False
+
         # Initialize logging
         self.log = logging.getLogger('MyLog')
-        logfile = logging.handlers.RotatingFileHandler('./rfm2pigateway.log', 'a', 50 * 1024, 1)
-        logfile.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-        self.log.addHandler(logfile)
+        if (logpath is None):
+            # If no path was specified, everything goes to sys.stderr
+            loghandler = logging.StreamHandler()
+        else:
+            # Otherwise, rotating logging over two 5 MB files
+            loghandler = logging.handlers.RotatingFileHandler(logpath,
+                                                           'a', 5000 * 1024, 1)
+        loghandler.setFormatter(logging.Formatter(
+                '%(asctime)s %(levelname)s %(message)s'))
+        self.log.addHandler(loghandler)
         self.log.setLevel(logging.DEBUG)
-        
-        # Initialize DB configuration
-        self._db_config = ConfigParser.RawConfigParser()
-
-        # Fetch settings from DB
-        self._settings = self._db_get_settings()
-        # If DB connexion fails, exit
-        if self._settings is None:
-            self.log.error("Connexion to DB failed. Exiting...")
-            raise Exception('Connexion to DB failed.')
-        self._status_update_timestamp = 0
-        self._time_update_timestamp = 0
         
         # Open serial port
         self._ser = self._open_serial_port()
         if self._ser is None:
-            self.log.error("COM port opening failed. Exiting...")
+            self.log.critical("COM port opening failed. Exiting...")
+            self.close()
             raise Exception('COM port opening failed.')
         
         # Initialize serial RX buffer
@@ -203,10 +201,21 @@ class RFM2PiGateway():
         # Initialize target emoncms server buffer set
         self._server_buffers = {}
         
-        # Update settigns (emoncms server buffers and RFM2Pi)
+        # Declare timers
+        self._status_update_timestamp = 0
+        self._time_update_timestamp = 0
+
+        # Get emoncms server buffers and RFM2Pi settings
         # (force_RFM2Pi_update forces RFM2Pi parameters to be sent)
-        self._update_settings(force_RFM2Pi_update=True)
+        self._settings = None
+        self._update_settings()
     
+        # If settings can't be obtained, exit
+        if self._settings is None:
+            self.log.critical("Couldn't get settings.")
+            self.close()
+            raise Exception("Couldn't get settings.")
+        
     def run(self):
         """Launch the gateway.
         
@@ -215,13 +224,16 @@ class RFM2PiGateway():
 
         """
 
+       # Set signal handler to catch SIGINT and shutdown gracefully
+        signal.signal(signal.SIGINT, self._sigint_handler)
+        
         # Until asked to stop
         while not self._exit:
             
             # Update settings and status every second
             now = time.time()
             if (now - self._status_update_timestamp > 1):
-                # Update status in DB to inform emoncms the script is running
+                # Update "running" status to inform emoncms the script is running
                 self._raspberrypi_running()
                 # Update settings
                 self._update_settings()
@@ -295,22 +307,18 @@ class RFM2PiGateway():
                         server_buf.send_data()
         
             # Sleep until next iteration
-            time.sleep(1);
+            time.sleep(0.2);
          
     def close(self):
         """Close gateway. Do some cleanup before leaving."""
         
         # Close serial port
-        self.log.debug("Closing serial port.")
-        self._ser.close()
+        if self._ser is not None:
+            self.log.debug("Closing serial port.")
+            self._ser.close()
 
-        # Delete PID file
-        try:
-            os.remove('PID')
-        except OSError:
-            pass
-        
         self.log.info("Exiting...")
+        logging.shutdown()
 
     def _sigint_handler(self, signal, frame):
         """Catch SIGINT (Ctrl+C)."""
@@ -319,49 +327,33 @@ class RFM2PiGateway():
         # gateway should exit at the end of current iteration.
         self._exit = True
 
-    def _db_query(self, SQLQuery):
-        """Connect to the database and execute a query
-        
-        SQLQuery (string): SQL query to execute
-
-        Returns the result in the form of a cursor of type dictionnary
-
-        """
-        
-        # Read DB connection parameters from config file
-        self._db_config.read('../../settings.ini')
-        try:
-            host=self._db_config.get('database', 'server')
-            user=self._db_config.get('database', 'username')
-            password=self._db_config.get('database', 'password')
-            database=self._db_config.get('database', 'database')
-        except Exception:
-            self.log.error('Missing database config parameter in settings.ini.')
-            return
-        
-        # Connect to database and execture query
-        db = None
-        try:
-            db = MySQLdb.connect(host,user,password,database,
-                                 cursorclass=MySQLdb.cursors.DictCursor)
-            cur = db.cursor()
-            cur.execute(SQLQuery)
-            db.commit()
-        except MySQLdb.Error as e:
-            self.log.error("Error %d: %s" % (e.args[0],e.args[1]))
-            return
-        db.close()
-        return cur
-    
-    def _db_get_settings(self):
-        """Fetch settings in the database
+    def get_settings(self):
+        """Get settings
         
         Returns a dictionnary
 
         """
-        cur = self._db_query("SELECT * FROM raspberrypi")
-        if cur:
-            return cur.fetchone()
+        try:
+            result = urllib2.urlopen("http://localhost/emoncms/raspberrypi/get.json")
+            result = result.readline()
+            # result is of the form
+            # {"userid":"1","sgroup":"210",...,"remoteprotocol":"http:\\/\\/"}
+            result = result[1:-1].split(',')
+            # result is now of the form
+            # ['"userid":"1"',..., '"remoteprotocol":"http:\\/\\/"']
+            settings = {}
+            # For each setting, separate key and value
+            for s in result:
+                # We can't just use split(':') as there can be ":" inside a value 
+                # (eg: "http://")
+                s = csv.reader([s], delimiter=':').next() 
+                settings[s[0]] = s[1].replace("\\","")
+            return settings
+
+        except Exception:
+            import traceback
+            self.log.warning("Couldn't get settings, Exception: " + traceback.format_exc())
+            return
 
     def _set_rfm2pi_setting(self, setting, value):
         """Send a configuration parameter to the RFM2Pi through COM port.
@@ -381,31 +373,33 @@ class RFM2PiGateway():
             self._ser.write(value+'g')
         time.sleep(1);
     
-    def _update_settings(self, force_RFM2Pi_update=False):
-        """Check settings in DB and update if needed.
+    def _update_settings(self):
+        """Check settings and update if needed."""
         
-        force_RFM2Pi_update (boolean): if True, all settings are sent, 
-        whether or not they were modified.
+        # Get settings
+        s_new = self.get_settings()
 
-        """
-        
-        # Get settings from DB
-        s_new = self._db_query("SELECT * FROM raspberrypi").fetchone()
-
-        # If s_new is None, DB connection failed
+        # If s_new is None, no answer to settings request
         if s_new is None:
-            self.log.warning("Database error. Cannot update settings.")
             return
 
-        # RFM2Pi settings
-        for param in ['baseid', 'frequency', 'sgroup']:
-            if ((s_new[param] != self._settings[param]) or force_RFM2Pi_update):
+        # If self._settings is None, this is the first call
+        # Send all RFM2Pi settings
+        if self._settings is None:
+            for param in ['baseid', 'frequency', 'sgroup']:
                 self._set_rfm2pi_setting(param,str(s_new[param]))
+
+        # General case, send RFM2Pi settings only if they changed
+        else:
+            for param in ['baseid', 'frequency', 'sgroup']:
+                if ((s_new[param] != self._settings[param])):
+                    self._set_rfm2pi_setting(param,str(s_new[param]))
 
         # Server settings
         if 'local' not in self._server_buffers:
             self._server_buffers['local'] = ServerDataBuffer(
                     gateway = self,
+                    protocol = 'http://',
                     domain = 'localhost',
                     path = '/emoncms', 
                     apikey = s_new['apikey'], 
@@ -413,23 +407,24 @@ class RFM2PiGateway():
                     active = True)
         else:
             self._server_buffers['local'].update_settings(
-                    apikey=s_new['apikey'],
-                    active=True)
+                    apikey = s_new['apikey'])
         
         if 'remote' not in self._server_buffers:
             self._server_buffers['remote'] = ServerDataBuffer(
                     gateway = self,
+                    protocol = s_new['remoteprotocol'], 
                     domain = s_new['remotedomain'], 
                     path = s_new['remotepath'],
                     apikey = s_new['remoteapikey'],
                     period = 30,
-                    active = s_new['remoteapikey'])
+                    active = int(s_new['remotesend']))
         else: 
             self._server_buffers['remote'].update_settings(
-                    domain=s_new['remotedomain'],
-                    path=s_new['remotepath'],
-                    apikey=s_new['remoteapikey'],
-                    active=s_new['remotesend'])
+                    protocol = s_new['remoteprotocol'], 
+                    domain = s_new['remotedomain'],
+                    path = s_new['remotepath'],
+                    apikey = s_new['remoteapikey'],
+                    active = int(s_new['remotesend']))
         
         self._settings = s_new
     
@@ -445,18 +440,20 @@ class RFM2PiGateway():
         except Exception:
             import traceback
             self.log.error(
-                "Couldn't send to server, Exception: " 
+                "Couldn't open serial port, Exception: " 
                 + traceback.format_exc())
         else:
             return ser
 
-
     def _raspberrypi_running(self):
-        """Update "script running" status in DB."""
-
-        return self._db_query("UPDATE raspberrypi SET running = '%s'" % str(int(time.time())))
-
-    
+        """Update "script running" status."""
+        
+        try:
+            result = urllib2.urlopen("http://localhost/emoncms/raspberrypi/setrunning.json")
+        except Exception:
+            import traceback
+            self.log.warning("Couldn't update \"running\" status, Exception: " + traceback.format_exc())
+           
     def _send_time(self):
         """Send time over radio link to synchronize emonGLCD."""
 
@@ -469,11 +466,42 @@ class RFM2PiGateway():
 
 if __name__ == "__main__":
 
+    # Command line arguments parser
+    parser = argparse.ArgumentParser(description='RFM2Pi Gateway')
+    parser.add_argument('--no-log-file', action='store_true',
+        help='log to Standard error stream STDERR (default: log to file)')
+    parser.add_argument('--show-settings', action='store_true',
+        help='show RFM2Pi settings and exit (for debugging purposes)')
+    args = parser.parse_args()
+
+    # Define default logfile unless explicitely told not to
+    if args.no_log_file:
+        logpath = None
+    else:
+        logpath = os.path.join(os.path.dirname(__file__), 
+                               'rfm2pigateway/rfm2pigateway.log')
+    
+    # Create, run, and close RFM2Pi Gateway instance
     try:
-        gateway = RFM2PiGateway()
+        gateway = RFM2PiGateway(logpath)
     except Exception as e:
         print(e)
     else:    
-        gateway.run()
+        # If in "Show settings" mode, print RFM2Pi settings and exit
+        if args.show_settings:
+            print(gateway.get_settings())
+        # Else, run normally
+        else:
+            # Store PID in a file to allow SIGINTability
+            with open(os.path.join(os.path.dirname(__file__), 
+                                   'rfm2pigateway/PID'),
+                      'w') as f:
+                f.write(str(os.getpid()))
+            # Run gateway
+            gateway.run()
+            # Delete PID file
+            os.remove(os.path.join(os.path.dirname(__file__),
+                                   'rfm2pigateway/PID'))
+        # When done, close gateway
         gateway.close()
-
+ 

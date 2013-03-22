@@ -84,7 +84,7 @@
 
   function update()
   {
-    if (raspberrypi.running()==true) {
+    if (raspberrypi.getrunning()==true) {
       $("#running").show(); 
       $("#not-running").hide();
     } else {

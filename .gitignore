@@ -1,2 +1,3 @@
-PID
-rfm2pigateway.log*
+/rfm2pigateway/PID
+/rfm2pigateway/rfm2pigateway.log*
+*.pyc

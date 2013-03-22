@@ -16,10 +16,17 @@ var raspberrypi = {
     return result;
   },
 
-  'running':function()
+  'getrunning':function()
   {
     var result = {};
-    $.ajax({ url: path+"raspberrypi/running.json", dataType: 'json', async: false, success: function(data) {result = data;} });
+    $.ajax({ url: path+"raspberrypi/getrunning.json", dataType: 'json', async: false, success: function(data) {result = data;} });
+    return result;
+  },
+
+  'setrunning':function()
+  {
+    var result = {};
+    $.ajax({ url: path+"raspberrypi/setrunning.json", dataType: 'json', async: false, success: function(data) {result = data;} });
     return result;
   }
 
