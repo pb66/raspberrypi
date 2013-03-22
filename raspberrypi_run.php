@@ -38,7 +38,7 @@
 
   // 3) User sessions
   require("../user/user_model.php");
-  $user = new User($mysqli);
+  $user = new User($mysqli,null);
 
   require "../feed/feed_model.php";
   $feed = new Feed($mysqli);
