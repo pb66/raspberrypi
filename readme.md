@@ -15,7 +15,15 @@ Install one of the two available gateway scripts to let them run on startup
 
 1/ Legacy raspberry_run.php
 
-  The php script is run every minute via cron daemon.
+  Install pecl php serial module
+
+  $ sudo apt-get install php-pear php5-dev
+  $ sudo pecl install channel://pecl.php.net/dio-0.0.6
+
+  Open php.ini with nano or any other editor and add "extension=dio.so"
+  in the beginning of the ;Dynamic Extensions; section
+
+  $ sudo nano /etc/php5/cli/php.ini
 
   Open crontab using nano or any other editor
 
@@ -25,12 +33,16 @@ Install one of the two available gateway scripts to let them run on startup
 
   */1 * * * * root cd /var/www/emoncms/Modules/raspberrypi && php raspberrypi_run.php
 
-  Then reboot
+  Then reboot. The script will be run every minute after startup.
 
   $ sudo reboot
 
 2/ RFM2Pi Gateway (python script)
 
+  Install python serial port and mySQL modules
+
+  $ sudo aptitude install python-serial python-mysqldb
+  
   Create groupe emoncms and make user pi part of it
 
   $ sudo groupadd emoncms
@@ -61,9 +73,4 @@ Install one of the two available gateway scripts to let them run on startup
   $ sudo /etc/init.d/rfm2pigateway stop
   $ sudo /etc/init.d/rfm2pigateway restart
 
-##Requires the pecl php serial module
 
-- sudo apt-get install php-pear php5-dev
-- sudo pecl install channel://pecl.php.net/dio-0.0.6
-- Add "extension=dio.so" to php.ini
-- Restart apache
