@@ -48,7 +48,11 @@
   <div style="width:300px; float:left;" >
     <p><b>Forward data to remote emoncms server</b></p>
 
-    <p>Protocol<br><input type="text" name="remoteprotocol" value="<?php echo $settings->remoteprotocol; ?>" /></p>
+    <p>Protocol<br>
+      <select name="remoteprotocol">
+        <option value = "http://" <?php if($settings->remoteprotocol=="http://") echo "selected"; ?>>http://</option>
+        <option value = "https://" <?php if($settings->remoteprotocol=="https://") echo "selected"; ?>>https://</option>
+      </select>
     <p>Domain name<br><input type="text" name="remotedomain" value="<?php echo $settings->remotedomain; ?>" /></p>
     <p>Path to emoncms<br><input type="text" name="remotepath" value="<?php echo $settings->remotepath; ?>" /></p>
     <p>Write apikey<br><input type="text" name="remoteapikey" value="<?php echo $settings->remoteapikey; ?>" /></p>
