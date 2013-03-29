@@ -1,0 +1,4 @@
+www-data     ALL=(ALL) NOPASSWD: \
+             /etc/init.d/rfm2pigateway start, \
+             /etc/init.d/rfm2pigateway restart, \
+             /etc/init.d/rfm2pigateway stop 

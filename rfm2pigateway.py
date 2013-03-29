@@ -14,6 +14,7 @@
 
 """
 TODO : 
+- I18n : translate strings (gettext ?)
 - add new parameters instead of hardcoding (log level, sending interval...)
 - allow any number of servers (instead of hardcoding 1 local and 1 remote) ?
 - save samples for later when connection is down
@@ -211,10 +212,10 @@ class RFM2PiGateway():
         self._update_settings()
     
         # If settings can't be obtained, exit
-        if self._settings is None:
-            self.log.critical("Couldn't get settings.")
-            self.close()
-            raise Exception("Couldn't get settings.")
+        while (self._settings is None):
+            self.log.warning("Couldn't get settings. Retrying in 10 sec...")
+            time.sleep(10)
+            self._update_settings()
         
     def run(self):
         """Launch the gateway.
@@ -468,22 +469,24 @@ if __name__ == "__main__":
 
     # Command line arguments parser
     parser = argparse.ArgumentParser(description='RFM2Pi Gateway')
-    parser.add_argument('--no-log-file', action='store_true',
-        help='log to Standard error stream STDERR (default: log to file)')
+    parser.add_argument('--logfile', action='store', type=argparse.FileType('a'),
+        help='path to optional log file (default: log to Standard error stream STDERR)')
     parser.add_argument('--show-settings', action='store_true',
         help='show RFM2Pi settings and exit (for debugging purposes)')
     args = parser.parse_args()
-
-    # Define default logfile unless explicitely told not to
-    if args.no_log_file:
-        logpath = None
-    else:
-        logpath = os.path.join(os.path.dirname(__file__), 
-                               'rfm2pigateway/rfm2pigateway.log')
     
+    # If logfile is supplied, argparse opens the file in append mode, 
+    # this ensures it is writable
+    # Close the file for now and get its path
+    if args.logfile is None:
+        logfile = None
+    else:
+        args.logfile.close()
+        logfile = args.logfile.name
+
     # Create, run, and close RFM2Pi Gateway instance
     try:
-        gateway = RFM2PiGateway(logpath)
+        gateway = RFM2PiGateway(logfile)
     except Exception as e:
         print(e)
     else:    
@@ -492,16 +495,7 @@ if __name__ == "__main__":
             print(gateway.get_settings())
         # Else, run normally
         else:
-            # Store PID in a file to allow SIGINTability
-            with open(os.path.join(os.path.dirname(__file__), 
-                                   'rfm2pigateway/PID'),
-                      'w') as f:
-                f.write(str(os.getpid()))
-            # Run gateway
             gateway.run()
-            # Delete PID file
-            os.remove(os.path.join(os.path.dirname(__file__),
-                                   'rfm2pigateway/PID'))
         # When done, close gateway
         gateway.close()
  
