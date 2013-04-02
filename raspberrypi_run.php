@@ -72,9 +72,12 @@
   $remoteapikey = $settings->remoteapikey;
 
   $sent_to_remote = false;
-  $result = file_get_contents($remoteprotocol.$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
-  if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
-
+  if ($remoteprotocol && $remotedomain && $remotepath && $remoteapikey)
+  {
+    $result = file_get_contents($remoteprotocol.$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
+  
+    if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
+  }
   // Create a stream context that configures the serial port
   // And enables canonical input.
   $c = stream_context_create(array('dio' =>
@@ -96,6 +99,7 @@
 
   // Open the stream for read and write and use it.
   $f = fopen($filename, "r+", false, $c);
+  stream_set_timeout($f, 0,1000);
   if ($f)
   {
     //fprintf($f,"\r\n");
@@ -111,6 +115,7 @@
     $ni = 0; $remotedata = "[";
     $start_time = time();
     $remotetimer = time();
+    $glcdtime = time();
 
     while(true)
     {
@@ -120,9 +125,24 @@
 
         $settings = $raspberrypi->get();
         $userid = $settings->userid;
-        if ($settings->sgroup !=$group) {$group = $settings->sgroup; fprintf($f,$group."g");}
-        if ($settings->frequency !=$frequency) {$frequency = $settings->frequency; fprintf($f,$frequency."b"); }
-        if ($settings->baseid !=$baseid) {$baseid = $settings->baseid; fprintf($f,$baseid."i");}
+
+        if ($settings->sgroup !=$group) {
+          $group = $settings->sgroup; 
+          fprintf($f,$group."g"); 
+          echo "Group set: ".$group."\n";
+        }
+
+        if ($settings->frequency !=$frequency) {
+          $frequency = $settings->frequency; 
+          fprintf($f,$frequency."b"); 
+          echo "Frequency set: ".$frequency."\n";
+        }
+
+        if ($settings->baseid !=$baseid) {
+          $baseid = $settings->baseid; 
+          fprintf($f,$baseid."i"); 
+          echo "Base station set: ".$baseid."\n";
+        }
 
         if ($settings->remotedomain !=$remotedomain || $settings->remoteapikey !=$remoteapikey || $settings->remotepath !=$remotepath || $settings->remoteprotocol !=$remoteprotocol)
         { 
@@ -131,10 +151,9 @@
         }
 
         $raspberrypi->set_running();
-
-        // Forward data to remote emoncms
-
       }
+
+
 
       if (time()-$remotetimer>30 && $sent_to_remote == true)
       {
@@ -151,12 +170,69 @@
       $data = fgets($f);
       if ($data && $data!="\n")
       {
-        echo "SERIAL RX:".$data;
 
-        if ($data[0]!=">")
+
+        if ($data[0]==">")  
         {
+          echo "MESSAGE RX:".$data;
+          $data = trim($data);
+          $len = strlen($data);
+
+          /*
+
+          For some as yet unknown reason periodically when sending data out from the rfm12pi
+          and maybe as part of the script the rfm12pi settings get set unintentionally. 
+          It has been suggested that this could be due to the data string to be sent being
+          corrupted and turning into a settings string.
+
+          To fix this situation a check is included here to confirm that the rfm12pi settings
+          have been set correctly and to catch an accidental change of settings.
+          
+          If an accidental change of settings occurs the settings will be changed back to the
+          user specified baseid, frequency and group settings.
+
+          */
+
+          if ($data[$len-1]=='b') {
+            $val = intval(substr($data,2,-1));
+            if ($val == $frequency) {
+              echo "FREQUENCY SET CORRECTLY\n"; 
+            } else {
+              echo "FREQUENCY ERROR, RE SENDING FREQUENCY\n";
+              fprintf($f,$frequency."b"); 
+            }
+          }
+
+          if ($data[$len-1]=='g') {
+            $val = intval(substr($data,2,-1));
+            if ($val == $group) {
+              echo "GROUP SET CORRECTLY\n"; 
+            } else {
+              echo "GROUP ERROR, RE SENDING GROUP\n";
+              fprintf($f,$group."g"); 
+            }
+          }
+
+          if ($data[$len-1]=='i') {
+            $val = intval(substr($data,2,-1));
+            if ($val == $baseid) {
+              echo "BASEID SET CORRECTLY\n";
+            } else {
+              echo "BASEID ERROR, RE SENDING BASEID\n";
+              fprintf($f,$baseid."g"); 
+            }
+          }
+        } 
+        elseif ($data[1]=="-") 
+        {
+          // Messages that start with a dash indicate a successful tx of data
+          echo "LENGTH:".$data;
+        }
+        else
+        {
+          echo "DATA RX:".$data;
           $values = explode(' ',$data);
-          if ($values && is_numeric($values[1]))
+          if (isset($values[1]) && is_numeric($values[1]))
           {
 
             $dbinputs = $input->get_inputs($userid);
@@ -206,6 +282,17 @@
 
           }
         }
+      }
+
+      // Sends the time to any listening nodes, including EmonGLCD's
+      if (time() - $glcdtime>5)
+      {
+        $glcdtime = time();
+        $hour = date('H');
+        $min = date('i');
+        fprintf($f,"00,$hour,$min,00,s");
+        echo "00,$hour,$min,00s\n";
+        usleep(100);
       }
 
     }
