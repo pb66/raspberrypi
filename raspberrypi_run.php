@@ -200,6 +200,7 @@
             } else {
               echo "FREQUENCY ERROR, RE SENDING FREQUENCY\n";
               fprintf($f,$frequency."b"); 
+              usleep(100);
             }
           }
 
@@ -210,6 +211,7 @@
             } else {
               echo "GROUP ERROR, RE SENDING GROUP\n";
               fprintf($f,$group."g"); 
+              usleep(100);
             }
           }
 
@@ -219,7 +221,8 @@
               echo "BASEID SET CORRECTLY\n";
             } else {
               echo "BASEID ERROR, RE SENDING BASEID\n";
-              fprintf($f,$baseid."g"); 
+              fprintf($f,$baseid."g");
+              usleep(100);
             }
           }
         } 
@@ -227,6 +230,51 @@
         {
           // Messages that start with a dash indicate a successful tx of data
           echo "LENGTH:".$data;
+        }
+        elseif ($data=="config save failed\n")
+        {
+          /*
+
+          Sometimes the RFM12PI returns config save failed the following resets the connection in the event of 
+          recieving this message. 
+          
+          */
+
+          echo "CONFIG fail detected\n";
+          fclose($fp);
+          sleep(1);
+          $f = fopen($filename, "r+", false, $c);
+          stream_set_timeout($f, 0,1000);
+          if ($f)
+          {
+            //fprintf($f,"\r\n");
+            sleep(1);
+            fprintf($f,$baseid."i");
+            sleep(1);
+            fprintf($f,$frequency."b");
+            sleep(1);
+            fprintf($f,$group."g");
+            sleep(1);
+          }
+        }
+        elseif ($data=="config save failed")
+        {
+          echo "CONFIG fail detected (no new line)\n";
+          fclose($fp);
+          sleep(1);
+          $f = fopen($filename, "r+", false, $c);
+          stream_set_timeout($f, 0,1000);
+          if ($f)
+          {
+            //fprintf($f,"\r\n");
+            sleep(1);
+            fprintf($f,$baseid."i");
+            sleep(1);
+            fprintf($f,$frequency."b");
+            sleep(1);
+            fprintf($f,$group."g");
+            sleep(1);
+          }
         }
         else
         {
