@@ -231,7 +231,7 @@
           // Messages that start with a dash indicate a successful tx of data
           echo "LENGTH:".$data;
         }
-        elseif ($data=="config save failed\n")
+        elseif (preg_match("/config save failed/i",$data))
         {
           /*
 
@@ -240,8 +240,8 @@
           
           */
 
-          echo "CONFIG fail detected\n";
-          fclose($fp);
+          echo "CONFIG save fail detected\n";
+          fclose($f);
           sleep(1);
           $f = fopen($filename, "r+", false, $c);
           stream_set_timeout($f, 0,1000);
@@ -257,10 +257,10 @@
             sleep(1);
           }
         }
-        elseif ($data=="config save failed")
+        elseif (preg_match("/config failed/i",$data))
         {
-          echo "CONFIG fail detected (no new line)\n";
-          fclose($fp);
+          echo "CONFIG fail detected\n";
+          fclose($f);
           sleep(1);
           $f = fopen($filename, "r+", false, $c);
           stream_set_timeout($f, 0,1000);
