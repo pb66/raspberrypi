@@ -13,7 +13,7 @@ This module is to be used with an emoncms installed on the PI to interface with 
 
 Install one of the two available gateway scripts to let them run on startup
 
-### Raspberry_run.php (currently has stability issue with sending time to EmonGLCD)
+### Raspberry_run.php (currently has stability issue with sending time to EmonGLCD, see python script for alternative)
 
   Install pecl php serial module
 
