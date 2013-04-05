@@ -75,6 +75,10 @@ Install one of the two available gateway scripts to let them run on startup
     $ sudo /etc/init.d/rfm2pigateway stop
     $ sudo /etc/init.d/rfm2pigateway restart
     
+  If local emonCMS installation is not at http://localhost/emoncms, use optional
+  arguments to define custom domain name and/or path. See rfm2pigateway --help
+  In this case, modify the init script accordingly.
+  
   To view the log:
   
     $ sudo tail -f -n 200 /var/log/rfm2pigatay/rfm2pigateway.log
