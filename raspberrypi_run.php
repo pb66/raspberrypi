@@ -1,4 +1,5 @@
 <?php
+
   /*
 
   All Emoncms code is released under the GNU Affero General Public License.
@@ -10,6 +11,8 @@
   http://openenergymonitor.org
 
   */
+
+  $sendTime = false
 
   define('EMONCMS_EXEC', 1);
 
@@ -240,7 +243,7 @@
           
           */
 
-          echo "CONFIG save fail detected\n";
+          echo "CONFIG save fail detected ".time()."\n";
           fclose($f);
           sleep(1);
           $f = fopen($filename, "r+", false, $c);
@@ -259,7 +262,7 @@
         }
         elseif (preg_match("/config failed/i",$data))
         {
-          echo "CONFIG fail detected\n";
+          echo "CONFIG fail detected ".time()."\n";
           fclose($f);
           sleep(1);
           $f = fopen($filename, "r+", false, $c);
@@ -333,7 +336,7 @@
       }
 
       // Sends the time to any listening nodes, including EmonGLCD's
-      if (time() - $glcdtime>5)
+      if (time() - $glcdtime>60 && $sendTime==true)
       {
         $glcdtime = time();
         $hour = date('H');
