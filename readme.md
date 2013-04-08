@@ -13,7 +13,7 @@ This module is to be used with an emoncms installed on the PI to interface with 
 
 Install one of the two available gateway scripts to let them run on startup
 
-### Legacy raspberry_run.php
+### Raspberry_run.php (currently has stability issue with sending time to EmonGLCD, see python script for alternative)
 
   Install pecl php serial module
 
@@ -74,4 +74,8 @@ Install one of the two available gateway scripts to let them run on startup
     $ sudo /etc/init.d/rfm2pigateway start
     $ sudo /etc/init.d/rfm2pigateway stop
     $ sudo /etc/init.d/rfm2pigateway restart
+    
+  To view the log:
+    
+    $ tail -F -n 40  /var/log/rfm2pigateway/rfm2pigateway.log
 
