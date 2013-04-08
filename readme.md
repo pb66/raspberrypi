@@ -80,7 +80,6 @@ Install one of the two available gateway scripts to let them run on startup
   In this case, modify the init script accordingly.
   
   To view the log:
-  
-    $ sudo tail -f -n 200 /var/log/rfm2pigatay/rfm2pigateway.log
-
+    
+    $ tail -F -n 40  /var/log/rfm2pigateway/rfm2pigateway.log
 
