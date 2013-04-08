@@ -336,7 +336,7 @@
       }
 
       // Sends the time to any listening nodes, including EmonGLCD's
-      if (time() - $glcdtime>5 && $sendTime==true)
+      if (time() - $glcdtime>60 && $sendTime==true)
       {
         $glcdtime = time();
         $hour = date('H');
