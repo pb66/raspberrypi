@@ -12,7 +12,7 @@
 
   */
 
-  $sendTime = true;
+  $sendTime = false;
 
   define('EMONCMS_EXEC', 1);
 
