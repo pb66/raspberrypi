@@ -20,7 +20,7 @@
 <p>To use the json api the request url needs to include .json</p>
 
 <p><b>Set settings</b></p>
-<p><a href="<?php echo $path; ?>raspberrypi/set.json?fields={'sgroup':210,'frequency':4,'baseid':15,'remoteprotocol':'http://','remotedomain':'emoncms.org','remotepath':'/','remoteapikey':'REMOTE_APIKEY'}"><?php echo $path; ?>raspberrypi/set.json?fields=<br>{'sgroup':210,'frequency':4,'baseid':15,'remoteprotocol':'http://','remotedomain':'emoncms.org','remotepath':'/','remoteapikey':'REMOTE_APIKEY'}</a><br>returns confirmation if settings given for remote server are correct. Requires write apikey.</p>
+<p><a href="<?php echo $path; ?>raspberrypi/set.json?fields={'sgroup':210,'frequency':4,'baseid':15,'remoteprotocol':'http://','remotedomain':'emoncms.org','remotepath':'/','remoteapikey':'REMOTE_APIKEY','sendtimeinterval':0}"><?php echo $path; ?>raspberrypi/set.json?fields=<br>{'sgroup':210,'frequency':4,'baseid':15,'remoteprotocol':'http://','remotedomain':'emoncms.org','remotepath':'/','remoteapikey':'REMOTE_APIKEY','sendtimeinterval':0}</a><br>returns confirmation if settings given for remote server are correct. Requires write apikey.</p>
 
 <p><b>Get settings</b></p>
 <p><a href="<?php echo $path; ?>raspberrypi/get.json"><?php echo $path; ?>raspberrypi/get.json</a> - returns raspberrypi settings. Requires read apikey <b>OR a request from localhost</b></p>
