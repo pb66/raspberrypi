@@ -30,7 +30,7 @@ class RaspberryPI
        
         if ($result->num_rows==0)
         {
-            $this->mysqli->query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remoteprotocol, remotepath, remoteapikey, remotesend) VALUES ( '0' , '' ,'1','4','15' ,'emoncms.org','http://','/','YOURAPIKEY','false');");
+            $this->mysqli->query("INSERT INTO raspberrypi ( userid, apikey, sgroup ,frequency, baseid, remotedomain, remoteprotocol, remotepath, remoteapikey, remotesend, sendtimeinterval) VALUES ( '0' , '' ,'1','4','15' ,'emoncms.org','http://','/','YOURAPIKEY','false','0');");
             $result = $this->mysqli->query("SELECT * FROM raspberrypi");
             $row = $result->fetch_object();
         }
@@ -63,6 +63,8 @@ class RaspberryPI
         if($fields->remotepath[0]!='/') {$fields->remotepath='/'.$fields->remotepath;}  // ensure leading slash in remotepath
         $array[] = "`remotepath` = '".$fields->remotepath."'";
         $array[] = "`remoteapikey` = '".($this->mysqli->real_escape_string(preg_replace('/[^.\/A-Za-z0-9]/', '', $fields->remoteapikey)))."'";
+        
+        $array[] = "`sendtimeinterval` = '".intval($fields->sendtimeinterval)."'";
 
         // Convert to a comma seperated string for the mysql query
         $fieldstr = implode(",",$array);

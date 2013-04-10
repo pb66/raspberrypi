@@ -12,8 +12,6 @@
 
   */
 
-  $sendTime = false;
-
   define('EMONCMS_EXEC', 1);
 
   $fp = fopen("importlock", "w");
@@ -336,7 +334,8 @@
       }
 
       // Sends the time to any listening nodes, including EmonGLCD's
-      if (time() - $glcdtime>60 && $sendTime==true)
+      if ($settings->sendtimeinterval!=0 &&
+          time()-$glcdtime > $settings->sendtimeinterval)
       {
         $glcdtime = time();
         $hour = date('H');

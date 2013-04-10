@@ -241,10 +241,12 @@ class RFM2PiGateway():
                 # "Thanks for the status update. You've made it crystal clear."
                 self._status_update_timestamp = now
             
-            # Send time every minute to synchronize emonGLCD
-            if (now - self._time_update_timestamp > 60):
-                self._send_time()
-                self._time_update_timestamp = now
+            # Broadcast time to synchronize emonGLCD
+            if (int(self._settings['sendtimeinterval'])):
+                if (now - self._time_update_timestamp > 
+                  int(self._settings['sendtimeinterval'])):
+                    self._send_time()
+                    self._time_update_timestamp = now
 
             # Read serial RX
             self._serial_rx_buf = self._serial_rx_buf + self._ser.readline()

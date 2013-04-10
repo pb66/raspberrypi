@@ -19,16 +19,14 @@
 <br>
 
 <div id="running" class="alert alert-success hide">
-  RFM12 to PI interface script is up and running
+  RFM12 to Pi interface script is up and running
 </div>
 
 <div id="not-running"  class="alert alert-important hide">
-  No data has been recieved from the RFM12PI in the last 30s. Check if the PI interface script is running, if not you may need to configure cron
+  No data has been recieved from the RFM12Pi in the last 30s. Check if the Pi interface script is running, if not you may need to configure cron
 </div>
-<br><div style="float:right;"><a href="api">RaspberryPI API Help</a></div>
-<h2>Raspberry PI</h2>
-
-
+<br><div style="float:right;"><a href="api">RaspberryPi API Help</a></div>
+<h2>Raspberry Pi</h2>
 
 <form id="testform">
   <div style="width:400px; float:left;">
@@ -43,6 +41,8 @@
 
     <p>Network Group: (210 default, 1-212)<br><input type="text" name="sgroup" value="<?php echo $settings->sgroup; ?>" /></p>
     <p>RFM12Pi node ID: (15 default, 15-17)<br><input type="text" name="baseid" value="<?php echo $settings->baseid; ?>" /></p>
+    <p><b>Broadcast time to synchronize emonGLCD</b></p>
+    <p>Time sending interval (s): (default 0 = never)<br><input type="text" name="sendtimeinterval" value="<?php echo $settings->sendtimeinterval; ?>" /></p>
   </div>
 
   <div style="width:300px; float:left;" >
