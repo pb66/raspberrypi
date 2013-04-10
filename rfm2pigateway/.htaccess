@@ -1,4 +1,0 @@
-<files *>
- Deny from all
- Allow from localhost
-</files>
