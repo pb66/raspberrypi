@@ -77,7 +77,7 @@
   {
     $result = file_get_contents($remoteprotocol.$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
   
-    if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
+    if (isset($result[0]) && $result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
   }
   // Create a stream context that configures the serial port
   // And enables canonical input.
