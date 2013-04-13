@@ -43,6 +43,9 @@ Install one of the two available gateway scripts to let them run on startup
 
     $ sudo aptitude install python-serial python-mysqldb
   
+  Ensure the script is executable
+    $ chmod 755 /var/www/emoncms/Modules/raspberrypi/rfm2pigateway.py
+  
   Create groupe emoncms and make user pi part of it
 
     $ sudo groupadd emoncms
@@ -54,18 +57,9 @@ Install one of the two available gateway scripts to let them run on startup
     $ sudo chown pi:emoncms /var/log/rfm2pigateway
     $ sudo chmod 750 /var/log/rfm2pigateway
 
-  Make apache user part of emoncms group, to read log files
-    
-    $ usermod -a -G emoncms www-data
-
-  Give apache the possibility to start/stop the gateway
-    
-    $ sudo cp rfm2pigateway.sudoers.dist /etc/sudoers.d/rfm2pigateway
-    $ sudo chmod 440 /etc/sudoers.d/rfm2pigateway
-
   Make script run as daemon on startup
 
-    $ sudo cp rfm2pigateway.init.dist /etc/init.d/rfm2pigateway
+    $ sudo cp /var/www/emoncms/Modules/raspberrypi/rfm2pigateway.init.dist /etc/init.d/rfm2pigateway
     $ sudo chmod 755 /etc/init.d/rfm2pigateway
     $ update-rc.d rfm2pigateway defaults 99
 
