@@ -2,6 +2,14 @@
 
 This module is to be used with an emoncms installed on the PI to interface with an RFM12 to PI board in a seemless fashion.
 
+Full documentation for setting up a raspberry pi installation of emoncms can be found here:
+
+[Build from scratch](http://emoncms.org/site/docs/raspberrypibuild)
+
+Or you can skip all the build steps and download a pre-built image:
+
+[Using ready-to-go image](http://emoncms.org/site/docs/raspberrypiimage)
+
 ##Features
 - set the emoncms account to send data to
 - set the RFM12 frequency
@@ -13,7 +21,7 @@ This module is to be used with an emoncms installed on the PI to interface with 
 
 Install one of the two available gateway scripts to let them run on startup
 
-### Raspberry_run.php
+### PHP Gateway
 
 Install serial PHP libraries
 
