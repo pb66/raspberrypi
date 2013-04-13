@@ -35,6 +35,10 @@ Start the service with:
 
     sudo service rfm12piphp start
 
+  To view the log:
+    
+    $ tail -F -n 40  /var/log/rfm12piphp/rfm12piphp.log
+
 ### RFM2Pi Gateway (python script)
 
   Install python serial port and mySQL modules
