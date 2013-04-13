@@ -13,29 +13,27 @@ This module is to be used with an emoncms installed on the PI to interface with 
 
 Install one of the two available gateway scripts to let them run on startup
 
-### Raspberry_run.php (currently has stability issue with sending time to EmonGLCD, see python script for alternative)
+### Raspberry_run.php
 
-  Install pecl php serial module
+Install serial PHP libraries
 
     $ sudo apt-get install php-pear php5-dev
     $ sudo pecl install channel://pecl.php.net/dio-0.0.6
-
-  Open php.ini with nano or any other editor and add "extension=dio.so"
-  in the beginning of the ;Dynamic Extensions; section
-
     $ sudo nano /etc/php5/cli/php.ini
 
-  Open crontab with nano or any other editor
+add extension=dio.so to file in the beginning of the ;Dynamic Extensions; section on line 843 
 
-    $ sudo nano /etc/crontab
+[Ctrl+X] then [y] then [Enter] to save and exit
 
-  Add following line at the end of the file:
+Install rfm12piphp gateway service:
 
-  */1 * * * * root cd /var/www/emoncms/Modules/raspberrypi && php raspberrypi_run.php
+    sudo cp rfm12piphp /etc/init.d/
+    sudo chmod 755 /etc/init.d/rfm12piphp
+    sudo update-rc.d rfm12piphp defaults
 
-  Then reboot. The script will be run every minute after startup.
+Start the service with:
 
-    $ sudo reboot
+    sudo service rfm12piphp start
 
 ### RFM2Pi Gateway (python script)
 
