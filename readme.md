@@ -2,6 +2,14 @@
 
 This module is to be used with an emoncms installed on the PI to interface with an RFM12 to PI board in a seemless fashion.
 
+Full documentation for setting up a raspberry pi installation of emoncms can be found here:
+
+[Build from scratch](http://emoncms.org/site/docs/raspberrypibuild)
+
+Or you can skip all the build steps and download a pre-built image:
+
+[Using ready-to-go image](http://emoncms.org/site/docs/raspberrypiimage)
+
 ##Features
 - set the emoncms account to send data to
 - set the RFM12 frequency
@@ -13,35 +21,40 @@ This module is to be used with an emoncms installed on the PI to interface with 
 
 Install one of the two available gateway scripts to let them run on startup
 
-### Raspberry_run.php (currently has stability issue with sending time to EmonGLCD, see python script for alternative)
+### PHP Gateway
 
-  Install pecl php serial module
+Install serial PHP libraries
 
     $ sudo apt-get install php-pear php5-dev
     $ sudo pecl install channel://pecl.php.net/dio-0.0.6
-
-  Open php.ini with nano or any other editor and add "extension=dio.so"
-  in the beginning of the ;Dynamic Extensions; section
-
     $ sudo nano /etc/php5/cli/php.ini
 
-  Open crontab with nano or any other editor
+add extension=dio.so to file in the beginning of the ;Dynamic Extensions; section on line 843 
 
-    $ sudo nano /etc/crontab
+[Ctrl+X] then [y] then [Enter] to save and exit
 
-  Add following line at the end of the file:
+Install rfm12piphp gateway service:
 
-  */1 * * * * root cd /var/www/emoncms/Modules/raspberrypi && php raspberrypi_run.php
+    sudo cp rfm12piphp /etc/init.d/
+    sudo chmod 755 /etc/init.d/rfm12piphp
+    sudo update-rc.d rfm12piphp defaults
 
-  Then reboot. The script will be run every minute after startup.
+Start the service with:
 
-    $ sudo reboot
+    sudo service rfm12piphp start
+
+  To view the log:
+    
+    $ tail -F -n 40  /var/log/rfm12piphp/rfm12piphp.log
 
 ### RFM2Pi Gateway (python script)
 
   Install python serial port and mySQL modules
 
     $ sudo aptitude install python-serial python-mysqldb
+  
+  Ensure the script is executable
+    $ chmod 755 /var/www/emoncms/Modules/raspberrypi/rfm2pigateway.py
   
   Create groupe emoncms and make user pi part of it
 
@@ -54,18 +67,9 @@ Install one of the two available gateway scripts to let them run on startup
     $ sudo chown pi:emoncms /var/log/rfm2pigateway
     $ sudo chmod 750 /var/log/rfm2pigateway
 
-  Make apache user part of emoncms group, to read log files
-    
-    $ usermod -a -G emoncms www-data
-
-  Give apache the possibility to start/stop the gateway
-    
-    $ sudo cp rfm2pigateway.sudoers.dist /etc/sudoers.d/rfm2pigateway
-    $ sudo chmod 440 /etc/sudoers.d/rfm2pigateway
-
   Make script run as daemon on startup
 
-    $ sudo cp rfm2pigateway.init.dist /etc/init.d/rfm2pigateway
+    $ sudo cp /var/www/emoncms/Modules/raspberrypi/rfm2pigateway.init.dist /etc/init.d/rfm2pigateway
     $ sudo chmod 755 /etc/init.d/rfm2pigateway
     $ update-rc.d rfm2pigateway defaults 99
 

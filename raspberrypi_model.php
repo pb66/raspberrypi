@@ -42,9 +42,9 @@ class RaspberryPI
         $fields = json_decode($fields);
 
         $remotesend = false;
-        if ($fields->remoteprotocol && $fields->remotedomain && $fields->remoteapikey && $fields->remotepath) {
+        if (isset($fields->remoteprotocol) && isset($fields->remotedomain) && isset($fields->remoteapikey) && isset($fields->remotepath)) {
             $result = file_get_contents($fields->remoteprotocol.$fields->remotedomain.$fields->remotepath."/time/local.json?apikey=".$fields->remoteapikey); 
-            if ($result[0]=='t') $remotesend = true;
+            if (isset($result[0]) && $result[0]=='t') $remotesend = true;
         }
 
         $array = array();
@@ -54,17 +54,22 @@ class RaspberryPI
         $array[] = "`remotesend` = '".$remotesend."'";
 
         // Repeat this line changing the field name to add fields that can be updated:
-        $array[] = "`sgroup` = '".intval($fields->sgroup)."'";
-        if ($fields->frequency) $array[] = "`frequency` = '".intval($fields->frequency)."'";
-        $array[] = "`baseid` = '".intval($fields->baseid)."'";
-        $array[] = "`remotedomain` = '".urldecode($fields->remotedomain)."'";
+        if (isset($fields->sgroup)) $array[] = "`sgroup` = '".intval($fields->sgroup)."'";
+        if (isset($fields->frequency)) $array[] = "`frequency` = '".intval($fields->frequency)."'";
+        if (isset($fields->baseid)) $array[] = "`baseid` = '".intval($fields->baseid)."'";
+        if (isset($fields->remotedomain)) $array[] = "`remotedomain` = '".urldecode($fields->remotedomain)."'";
 
-        $array[] = "`remoteprotocol` = '".$fields->remoteprotocol."'";
-        if($fields->remotepath[0]!='/') {$fields->remotepath='/'.$fields->remotepath;}  // ensure leading slash in remotepath
-        $array[] = "`remotepath` = '".$fields->remotepath."'";
-        $array[] = "`remoteapikey` = '".($this->mysqli->real_escape_string(preg_replace('/[^.\/A-Za-z0-9]/', '', $fields->remoteapikey)))."'";
+        if (isset($fields->remoteprotocol)) $array[] = "`remoteprotocol` = '".$fields->remoteprotocol."'";
+
+        if (isset($fields->remotepath)) {
+          // ensure leading slash in remotepath
+          if($fields->remotepath[0]!='/') {$fields->remotepath='/'.$fields->remotepath;}  
+          $array[] = "`remotepath` = '".$fields->remotepath."'";
+        }
+
+        if (isset($fields->remoteapikey)) $array[] = "`remoteapikey` = '".($this->mysqli->real_escape_string(preg_replace('/[^.\/A-Za-z0-9]/', '', $fields->remoteapikey)))."'";
         
-        $array[] = "`sendtimeinterval` = '".intval($fields->sendtimeinterval)."'";
+        if (isset($fields->sendtimeinterval)) $array[] = "`sendtimeinterval` = '".intval($fields->sendtimeinterval)."'";
 
         // Convert to a comma seperated string for the mysql query
         $fieldstr = implode(",",$array);
