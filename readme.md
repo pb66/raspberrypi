@@ -79,9 +79,9 @@ Start the service with:
     $ sudo /etc/init.d/rfm2pigateway stop
     $ sudo /etc/init.d/rfm2pigateway restart
     
-  If local emonCMS installation is not at http://localhost/emoncms, use optional
-  arguments to define custom domain name and/or path. See rfm2pigateway --help
-  In this case, modify the init script accordingly.
+  If local emonCMS installation is not at http://localhost/emoncms, use
+  optional --local-url argument to define custom url. In this case, modify the
+  init script accordingly.
   
   To view the log:
     
