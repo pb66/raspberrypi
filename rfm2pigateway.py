@@ -38,16 +38,17 @@ Stores server parameters and buffers the data between two HTTP requests
 """
 class ServerDataBuffer():
 
-    def __init__(self, gateway, protocol, domain, path, apikey, period, active):
+    def __init__(self, protocol, domain, path, apikey, period, active, logger=None):
         """Create a server data buffer initialized with server settings.
         
         domain (string): domain name (eg: 'domain.tld')
         path (string): emoncms path with leading slash (eg: '/emoncms')
         apikey (string): API key with write access
         period (int): sending interval in seconds
+        active (bool): whether the data buffer is active
+        logger (string): the logger's name (default None)
         
         """
-        self._gateway = gateway
         self._protocol = protocol
         self._domain = domain
         self._path = path
@@ -56,6 +57,7 @@ class ServerDataBuffer():
         self._data_buffer = []
         self._last_send = time.time()
         self._active = active
+        self._logger = logging.getLogger(logger)
 
     def update_settings(self, protocol=None, domain=None, path=None, apikey=None, period=None, active=None):
         """Update server settings."""
@@ -82,7 +84,7 @@ class ServerDataBuffer():
         if not self._active:
             return
         
-        self._gateway.log.debug("Server " + self._domain + self._path + " -> add data: " + str(data))
+        self._logger.debug("Server " + self._domain + self._path + " -> add data: " + str(data))
         
         # Insert timestamp before data
         dataset = list(data) # Make a distinct copy: we don't want to modify data
@@ -108,31 +110,31 @@ class ServerDataBuffer():
             data_string += '],'
         data_string = data_string[0:-1]+']' # Remove trailing comma and close bracket 
         self._data_buffer = []
-        self._gateway.log.debug("Data string: " + data_string)
+        self._logger.debug("Data string: " + data_string)
         
         # Prepare URL string of the form
         # 'http://domain.tld/emoncms/input/bulk.json?apikey=12345&data=[[-10,10,1806],[-5,10,1806],[0,10,1806]]'
         url_string = self._protocol+self._domain+self._path+"/input/bulk.json?apikey="+self._apikey+"&data="+data_string
-        self._gateway.log.debug("URL string: " + url_string)
+        self._logger.debug("URL string: " + url_string)
 
         # Send data to server
-        self._gateway.log.info("Sending to " + self._domain + self._path)
+        self._logger.info("Sending to " + self._domain + self._path)
         try:
             result = urllib2.urlopen(url_string)
         except urllib2.HTTPError as e:
-            self._gateway.log.warning("Couldn't send to server, HTTPError: " + str(e.code))
+            self._logger.warning("Couldn't send to server, HTTPError: " + str(e.code))
         except urllib2.URLError as e:
-            self._gateway.log.warning("Couldn't send to server, URLError: " + str(e.reason))
+            self._logger.warning("Couldn't send to server, URLError: " + str(e.reason))
         except httplib.HTTPException:
-            self._gateway.log.warning("Couldn't send to server, HTTPException")
+            self._logger.warning("Couldn't send to server, HTTPException")
         except Exception:
             import traceback
-            self._gateway.log.warning("Couldn't send to server, Exception: " + traceback.format_exc())
+            self._logger.warning("Couldn't send to server, Exception: " + traceback.format_exc())
         else:
             if (result.readline() == 'ok'):
-                self._gateway.log.info("Send ok")
+                self._logger.info("Send ok")
             else:
-                self._gateway.log.warning("Send failure")
+                self._logger.warning("Send failure")
         
         # Update _last_send
         self._last_send = time.time()
@@ -176,7 +178,7 @@ class RFM2PiGateway():
         self._exit = False
 
         # Initialize logging
-        self.log = logging.getLogger('MyLog')
+        self.log = logging.getLogger(__name__)
         if (logpath is None):
             # If no path was specified, everything goes to sys.stderr
             loghandler = logging.StreamHandler()
@@ -401,33 +403,33 @@ class RFM2PiGateway():
         # Server settings
         if 'local' not in self._server_buffers:
             self._server_buffers['local'] = ServerDataBuffer(
-                    gateway = self,
                     protocol = 'http://',
                     domain = 'localhost',
                     path = '/emoncms', 
                     apikey = s_new['apikey'], 
                     period = 0, 
-                    active = True)
+                    active = True,
+                    logger = __name__)
         else:
             self._server_buffers['local'].update_settings(
                     apikey = s_new['apikey'])
         
         if 'remote' not in self._server_buffers:
             self._server_buffers['remote'] = ServerDataBuffer(
-                    gateway = self,
                     protocol = s_new['remoteprotocol'], 
                     domain = s_new['remotedomain'], 
                     path = s_new['remotepath'],
                     apikey = s_new['remoteapikey'],
                     period = 30,
-                    active = int(s_new['remotesend']))
+                    active = bool(s_new['remotesend']),
+                    logger = __name__)
         else: 
             self._server_buffers['remote'].update_settings(
                     protocol = s_new['remoteprotocol'], 
                     domain = s_new['remotedomain'],
                     path = s_new['remotepath'],
                     apikey = s_new['remoteapikey'],
-                    active = int(s_new['remotesend']))
+                    active = bool(int(s_new['remotesend'])))
         
         self._settings = s_new
     
