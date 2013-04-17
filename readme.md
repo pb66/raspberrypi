@@ -35,13 +35,20 @@ add extension=dio.so to file in the beginning of the ;Dynamic Extensions; sectio
 
 Install rfm12piphp gateway service:
 
-    sudo cp rfm12piphp /etc/init.d/
+    sudo cp /var/www/emoncms/Modules/raspberrypi/rfm12piphp /etc/init.d/
     sudo chmod 755 /etc/init.d/rfm12piphp
     sudo update-rc.d rfm12piphp defaults
 
 Start the service with:
 
-    sudo /etc/init.d/rfm12piphp start
+    $sudo /etc/init.d/rfm12piphp start
+    
+the following commands can also be used to control the service
+
+    $sudo service rfm12piphp status
+    $ sudo service rfm12piphp start
+    $ sudo service rfm12piphp stop
+    $ sudo service rfm12piphp restart
 
   To view the log:
     
@@ -59,7 +66,7 @@ Start the service with:
   Create groupe emoncms and make user pi part of it
 
     $ sudo groupadd emoncms
-    $ usermod -a -G emoncms pi
+    $ sudo usermod -a -G emoncms pi
 
   Create a directory for the logfiles and give ownership to user pi, group emoncms
 
@@ -75,10 +82,6 @@ Start the service with:
 
   The gateway can be started or stopped anytime with following commands:
   
-    $ sudo service rfm12piphp status
-    $ sudo service rfm12piphp start
-    $ sudo service rfm12piphp stop
-    $ sudo service rfm12piphp restart
 
     
   To view the log:
