@@ -41,11 +41,11 @@ Install rfm12piphp gateway service:
 
 Start the service with:
 
-    sudo service rfm12piphp start
+    sudo /etc/init.d/rfm12piphp start
 
   To view the log:
     
-    $ tail -F -n 40  /var/log/rfm12piphp/rfm12piphp.log
+    $ tail -F -n 40  /var/log/rfm12piphp.log
 
 ### RFM2Pi Gateway (python script)
 
