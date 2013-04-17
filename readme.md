@@ -41,11 +41,11 @@ Install rfm12piphp gateway service:
 
 Start the service with:
 
-    $sudo /etc/init.d/rfm12piphp start
+    $ sudo /etc/init.d/rfm12piphp start
     
 the following commands can also be used to control the service
 
-    $sudo service rfm12piphp status
+    $ sudo service rfm12piphp status
     $ sudo service rfm12piphp start
     $ sudo service rfm12piphp stop
     $ sudo service rfm12piphp restart
