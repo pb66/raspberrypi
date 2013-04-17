@@ -74,12 +74,14 @@ Start the service with:
     $ update-rc.d rfm2pigateway defaults 99
 
   The gateway can be started or stopped anytime with following commands:
+  
+    $ sudo service rfm12piphp status
+    $ sudo service rfm12piphp start
+    $ sudo service rfm12piphp stop
+    $ sudo service rfm12piphp restart
 
-    $ sudo /etc/init.d/rfm2pigateway start
-    $ sudo /etc/init.d/rfm2pigateway stop
-    $ sudo /etc/init.d/rfm2pigateway restart
     
   To view the log:
     
-    $ tail -F -n 40  /var/log/rfm2pigateway/rfm2pigateway.log
+    $ sudo tail -f -n 20 /var/log/rfm12piphp.log
 
