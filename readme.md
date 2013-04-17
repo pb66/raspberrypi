@@ -82,8 +82,10 @@ the following commands can also be used to control the service
 
   The gateway can be started or stopped anytime with following commands:
   
-
-    
+    $ sudo /etc/init.d/rfm2pigateway start
+    $ sudo /etc/init.d/rfm2pigateway stop
+    $ sudo /etc/init.d/rfm2pigateway restart
+ 
   To view the log:
     
     $ sudo tail -f -n 20 /var/log/rfm12piphp.log
