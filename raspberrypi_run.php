@@ -72,13 +72,6 @@
   $remotepath = $settings->remotepath;
   $remoteapikey = $settings->remoteapikey;
 
-  $sent_to_remote = false;
-  if ($remoteprotocol && $remotedomain && $remotepath && $remoteapikey)
-  {
-    $result = file_get_contents($remoteprotocol.$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
-  
-    if (isset($result[0]) && $result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
-  }
   // Create a stream context that configures the serial port
   // And enables canonical input.
   $c = stream_context_create(array('dio' =>
@@ -145,18 +138,12 @@
           echo "Base station set: ".$baseid."\n";
         }
 
-        if ($settings->remotedomain !=$remotedomain || $settings->remoteapikey !=$remoteapikey || $settings->remotepath !=$remotepath || $settings->remoteprotocol !=$remoteprotocol)
-        { 
-          $result = file_get_contents($remoteprotocol.$remotedomain.$remotepath."/time/local.json?apikey=".$remoteapikey);
-          if ($result[0]=='t') {echo "Remote upload enabled - details correct \n"; $sent_to_remote = true; }
-        }
-
         $raspberrypi->set_running();
       }
 
 
 
-      if (time()-$remotetimer>30 && $sent_to_remote == true)
+      if (time()-$remotetimer>30 && $settings->remotesend == true)
       {
         $remotetimer = time();
 
@@ -322,7 +309,7 @@
             }
             foreach ($tmp as $i) $process->input($time,$i['value'],$i['processList']);
 
-            if ($sent_to_remote == true)
+            if ($settings->remotesend == true)
             {
               if ($ni!=0) $remotedata .= ",";
               $td = intval(time() - $start_time);
