@@ -67,11 +67,6 @@
   $frequency = $settings->frequency;
   $baseid = $settings->baseid;
 
-  $remoteprotocol = $settings->remoteprotocol;
-  $remotedomain = $settings->remotedomain;
-  $remotepath = $settings->remotepath;
-  $remoteapikey = $settings->remoteapikey;
-
   // Create a stream context that configures the serial port
   // And enables canonical input.
   $c = stream_context_create(array('dio' =>
@@ -150,7 +145,7 @@
         $remotedata .= "]";
         echo "Sending remote data";
         //echo $remotedata."\n";
-        getcontent($remotedomain,80,$remotepath."/input/bulk.json?apikey=".$remoteapikey."&data=".$remotedata);
+        getcontent($settings->remotedomain,80,$settings->remotepath."/input/bulk.json?apikey=".$settings->remoteapikey."&data=".$settings->remotedata);
         $ni = 0; $remotedata = "[";
         $start_time = time();
       }
