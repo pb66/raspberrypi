@@ -88,5 +88,6 @@ the following commands can also be used to control the service
  
   To view the log:
     
-    $ sudo tail -f -n 20 /var/log/rfm12piphp.log
+    $ sudo tail -f -n 20 /var/log/rfm2pigateway/rfm2pigateway.log  (Ctrl+C to cancel)
+    
 
