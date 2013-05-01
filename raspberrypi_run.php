@@ -150,7 +150,7 @@
         $remotedata .= "]";
         echo "Sending remote data";
         //echo $remotedata."\n";
-        getcontent($settings->remotedomain,80,$settings->remotepath."/input/bulk.json?apikey=".$settings->remoteapikey."&data=".$remotedata);
+        getcontent($remotedomain,80,$remotepath."/input/bulk.json?apikey=".$remoteapikey."&data=".$remotedata);
         $ni = 0; $remotedata = "[";
         $start_time = time();
       }
