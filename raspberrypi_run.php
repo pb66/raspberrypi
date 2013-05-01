@@ -57,20 +57,15 @@
 
   $settings = $raspberrypi->get();
   $apikey = $settings->apikey;
-  $userid = $settings->userid;
+  if (!$settings->userid) $settings->userid = 1;
 
   $session = array();
-  $session['userid'] = $userid;
-  if ($userid == 0) $userid = 1;
+  $session['userid'] = $settings->userid;
+
 
   $group = $settings->sgroup;
   $frequency = $settings->frequency;
   $baseid = $settings->baseid;
-
-  $remoteprotocol = $settings->remoteprotocol;
-  $remotedomain = $settings->remotedomain;
-  $remotepath = $settings->remotepath;
-  $remoteapikey = $settings->remoteapikey;
 
   // Create a stream context that configures the serial port
   // And enables canonical input.
@@ -118,7 +113,7 @@
         $start = time();
 
         $settings = $raspberrypi->get();
-        $userid = $settings->userid;
+        $session['userid'] = $settings->userid;
 
         if ($settings->sgroup !=$group) {
           $group = $settings->sgroup; 
@@ -150,7 +145,7 @@
         $remotedata .= "]";
         echo "Sending remote data";
         //echo $remotedata."\n";
-        getcontent($remotedomain,80,$remotepath."/input/bulk.json?apikey=".$remoteapikey."&data=".$remotedata);
+        getcontent($settings->remotedomain,80,$settings->remotepath."/input/bulk.json?apikey=".$settings->remoteapikey."&data=".$remotedata);
         $ni = 0; $remotedata = "[";
         $start_time = time();
       }
@@ -271,7 +266,7 @@
           if (isset($values[1]) && is_numeric($values[1]))
           {
 
-            $dbinputs = $input->get_inputs($userid);
+            $dbinputs = $input->get_inputs($settings->userid);
 
             $nodeid = (int) $values[1];
             $msubs = "";
@@ -298,7 +293,7 @@
               $name = $nameid;
 
               if (!isset($dbinputs[$nodeid][$name])) {
-                $input->create_input($session['userid'], $nodeid, $name);
+                $input->create_input($settings->userid, $nodeid, $name);
                 $dbinputs[$nodeid][$name] = true;
               } else { 
                 if ($dbinputs[$nodeid][$name]['record']) $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
