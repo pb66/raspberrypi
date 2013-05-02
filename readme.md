@@ -39,6 +39,8 @@ Install rfm12piphp gateway service:
     sudo chmod 755 /etc/init.d/rfm12piphp
     sudo update-rc.d rfm12piphp defaults
 
+**2 MAY 2013 UPDATED rfm12piphp** recall the above 3 commands to update your rfm12piphp script after fetching the latest changes from github, then restart the rfm12piphp service.
+
 Start the service with:
 
     $ sudo /etc/init.d/rfm12piphp start
@@ -50,9 +52,19 @@ the following commands can also be used to control the service
     $ sudo service rfm12piphp stop
     $ sudo service rfm12piphp restart
 
-  To view the log:
+#### Debugging
+
+It is often useful to log the output of the rfm12piphp service to check that its working ok. Logging is turned off as default to reduce the amount of writes to the SD card. To turn logging on just add the word log to the end of the service command, ie:
+
+    sudo service rfm12piphp restart log
+
+To view the log:
     
     $ tail -F -n 40  /var/log/rfm12piphp.log
+
+To prolong the life of your SD Card turn off logging when its not needed by calling restart without the log:
+
+    sudo service rfm12piphp restart
 
 ### RFM2Pi Gateway (python script)
 
