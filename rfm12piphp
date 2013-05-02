@@ -38,7 +38,7 @@ RPI_SCRIPT="raspberrypi_run.php"
 ## where the binary is located
 RPI_EXEC=/usr/bin/php
 
-if [ "$1" = "log" ]; then
+if [ "$2" = "log" ]; then
   echo "Log is turned on"
   LOG=1
 else
