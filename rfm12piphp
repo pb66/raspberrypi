@@ -87,7 +87,7 @@ function do_start {
 	  $RPI_EXEC -f $RPI_BIN >> /var/log/rfm12piphp.log &
 	  echo $! > $RPI_PID_FILE
   else
-  	$RPI_EXEC -f $RPI_BIN &
+  	$RPI_EXEC -f $RPI_BIN > /dev/null 2>&1 &
 	  echo $! > $RPI_PID_FILE
   fi
 }
