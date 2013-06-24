@@ -38,8 +38,18 @@ RPI_SCRIPT="raspberrypi_run.php"
 ## where the binary is located
 RPI_EXEC=/usr/bin/php
 
+if [ "$2" = "log" ]; then
+  echo "Log is turned on"
+  LOG=1
+else
+  echo "Log is turned off"
+  LOG=0
+fi
 
 ########### SETTINGS END ############
+
+
+
 
 set -e
 DEBUG=off
@@ -72,8 +82,14 @@ function debug() {
 function do_start {
 	cd $(dirname $RPI_BIN)
         sleep 7
-	$RPI_EXEC -f $RPI_BIN >> /var/log/rfm12piphp.log &
-	echo $! > $RPI_PID_FILE
+
+  if [ "$LOG" = 1 ]; then
+	  $RPI_EXEC -f $RPI_BIN >> /var/log/rfm12piphp.log &
+	  echo $! > $RPI_PID_FILE
+  else
+  	$RPI_EXEC -f $RPI_BIN > /dev/null 2>&1 &
+	  echo $! > $RPI_PID_FILE
+  fi
 }
 
 function do_stop {

@@ -35,17 +35,36 @@ add extension=dio.so to file in the beginning of the ;Dynamic Extensions; sectio
 
 Install rfm12piphp gateway service:
 
-    sudo cp rfm12piphp /etc/init.d/
+    sudo cp /var/www/emoncms/Modules/raspberrypi/rfm12piphp /etc/init.d/
     sudo chmod 755 /etc/init.d/rfm12piphp
     sudo update-rc.d rfm12piphp defaults
 
+**2 MAY 2013 UPDATED rfm12piphp** recall the above 3 commands to update your rfm12piphp script after fetching the latest changes from github, then restart the rfm12piphp service.
+
 Start the service with:
 
-    sudo service rfm12piphp start
-
-  To view the log:
+    $ sudo /etc/init.d/rfm12piphp start
     
-    $ tail -F -n 40  /var/log/rfm12piphp/rfm12piphp.log
+the following commands can also be used to control the service
+
+    $ sudo service rfm12piphp status
+    $ sudo service rfm12piphp start
+    $ sudo service rfm12piphp stop
+    $ sudo service rfm12piphp restart
+
+#### Debugging
+
+It is often useful to log the output of the rfm12piphp service to check that its working ok. Logging is turned off as default to reduce the amount of writes to the SD card. To turn logging on just add the word log to the end of the service command, ie:
+
+    sudo service rfm12piphp restart log
+
+To view the log:
+    
+    $ tail -F -n 40  /var/log/rfm12piphp.log
+
+To prolong the life of your SD Card turn off logging when its not needed by calling restart without the log:
+
+    sudo service rfm12piphp restart
 
 ### RFM2Pi Gateway (python script)
 
@@ -59,7 +78,7 @@ Start the service with:
   Create groupe emoncms and make user pi part of it
 
     $ sudo groupadd emoncms
-    $ usermod -a -G emoncms pi
+    $ sudo usermod -a -G emoncms pi
 
   Create a directory for the logfiles and give ownership to user pi, group emoncms
 
@@ -74,7 +93,7 @@ Start the service with:
     $ update-rc.d rfm2pigateway defaults 99
 
   The gateway can be started or stopped anytime with following commands:
-
+  
     $ sudo /etc/init.d/rfm2pigateway start
     $ sudo /etc/init.d/rfm2pigateway stop
     $ sudo /etc/init.d/rfm2pigateway restart
@@ -85,5 +104,6 @@ Start the service with:
   
   To view the log:
     
-    $ tail -F -n 40  /var/log/rfm2pigateway/rfm2pigateway.log
+    $ tail -f -n 20 /var/log/rfm2pigateway/rfm2pigateway.log  (Ctrl+C to cancel)
+    
 

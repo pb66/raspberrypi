@@ -12,7 +12,7 @@ $schema['raspberrypi'] = array(
   'remotepath' => array('type' => 'text'),
   'remoteapikey' => array('type' => 'text'),
   'remotesend' => array('type' => 'int(11)'),
-  'sendtimeinterval' => array('type' => 'int(11)')
+  'sendtimeinterval' => array('type' => 'int(11)', 'default'=>0)
 );
 
 ?>
