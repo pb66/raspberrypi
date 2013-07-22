@@ -23,13 +23,12 @@
     const VALUE = 0;
     const INPUTID = 1;
     const FEEDID = 2;
+    const NONE = 3;
   }
 
   class DataType {
-    const UNDEFINED = 0;
-    const REALTIME = 1;
-    const DAILY = 2;
-    const HISTOGRAM = 3;
+    const TIMESTORE = 0;
+    const HISTOGRAM = 1;
   }
 
   // 1) Load settings and core scripts
@@ -37,12 +36,15 @@
   // 2) Database
   $mysqli = new mysqli($server,$username,$password,$database);
 
+  require "../feed/timestore_class.php";
+  $timestore = new Timestore($timestore_adminkey);
+
   // 3) User sessions
   require("../user/user_model.php");
   $user = new User($mysqli,null);
 
   require "../feed/feed_model.php";
-  $feed = new Feed($mysqli);
+  $feed = new Feed($mysqli,$timestore);
 
   require "../input/input_model.php";
   $input = new Input($mysqli,$feed);
