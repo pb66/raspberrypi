@@ -97,9 +97,13 @@ To prolong the life of your SD Card turn off logging when its not needed by call
     $ sudo /etc/init.d/rfm2pigateway start
     $ sudo /etc/init.d/rfm2pigateway stop
     $ sudo /etc/init.d/rfm2pigateway restart
- 
+    
+  If local emonCMS installation is not at http://localhost/emoncms, use
+  optional --local-url argument to define custom url. In this case, modify the
+  init script accordingly.
+  
   To view the log:
     
-    $ sudo tail -f -n 20 /var/log/rfm2pigateway/rfm2pigateway.log  (Ctrl+C to cancel)
+    $ tail -f -n 20 /var/log/rfm2pigateway/rfm2pigateway.log  (Ctrl+C to cancel)
     
 

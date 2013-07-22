@@ -30,6 +30,7 @@ import signal
 import os
 import csv
 import argparse
+import urlparse
 
 """class ServerDataBuffer
 
@@ -166,11 +167,13 @@ emoncms servers through ServerDataBuffer instances.
 """
 class RFM2PiGateway():
     
-    def __init__(self, logpath=None):
+    def __init__(self, logpath=None, local_url='http://localhost/emoncms'):
         """Setup an RFM2Pi gateway.
         
         logpath (path): Path to the file the log should be written into.
             If Null, log to STDERR.
+        local_domain (string): domain name of local emonCMS server
+        local_path (string): path to emonCMS on local server
 
         """
 
@@ -190,6 +193,12 @@ class RFM2PiGateway():
                 '%(asctime)s %(levelname)s %(message)s'))
         self.log.addHandler(loghandler)
         self.log.setLevel(logging.DEBUG)
+        
+        # Initialize local server settings
+        url = urlparse.urlparse(local_url)
+        self._local_protocol = url.scheme + '://'
+        self._local_domain = url.netloc
+        self._local_path = url.path
         
         # Open serial port
         self._ser = self._open_serial_port()
@@ -339,7 +348,10 @@ class RFM2PiGateway():
 
         """
         try:
-            result = urllib2.urlopen("http://localhost/emoncms/raspberrypi/get.json")
+            result = urllib2.urlopen(self._local_protocol +
+                                     self._local_domain +
+                                     self._local_path +
+                                     "/raspberrypi/get.json")
             result = result.readline()
             # result is of the form
             # {"userid":"1","sgroup":"210",...,"remoteprotocol":"http:\\/\\/"}
@@ -403,9 +415,9 @@ class RFM2PiGateway():
         # Server settings
         if 'local' not in self._server_buffers:
             self._server_buffers['local'] = ServerDataBuffer(
-                    protocol = 'http://',
-                    domain = 'localhost',
-                    path = '/emoncms', 
+                    protocol = self._local_protocol,
+                    domain = self._local_domain,
+                    path = self._local_path, 
                     apikey = s_new['apikey'], 
                     period = 0, 
                     active = True,
@@ -454,7 +466,10 @@ class RFM2PiGateway():
         """Update "script running" status."""
         
         try:
-            result = urllib2.urlopen("http://localhost/emoncms/raspberrypi/setrunning.json")
+            result = urllib2.urlopen(self._local_protocol +
+                                     self._local_domain +
+                                     self._local_path +
+                                     "/raspberrypi/setrunning.json")
         except Exception:
             import traceback
             self.log.warning("Couldn't update \"running\" status, Exception: " + traceback.format_exc())
@@ -475,6 +490,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='RFM2Pi Gateway')
     parser.add_argument('--logfile', action='store', type=argparse.FileType('a'),
         help='path to optional log file (default: log to Standard error stream STDERR)')
+    parser.add_argument('--local-url', action='store', default='http://localhost/emoncms',
+        help='custom local URL (default: \'http://localhost/emoncms\')')
     parser.add_argument('--show-settings', action='store_true',
         help='show RFM2Pi settings and exit (for debugging purposes)')
     args = parser.parse_args()
@@ -490,7 +507,7 @@ if __name__ == "__main__":
 
     # Create, run, and close RFM2Pi Gateway instance
     try:
-        gateway = RFM2PiGateway(logfile)
+        gateway = RFM2PiGateway(logfile, args.local_url)
     except Exception as e:
         print(e)
     else:    
