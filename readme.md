@@ -68,9 +68,9 @@ To prolong the life of your SD Card turn off logging when its not needed by call
 
 ### RFM2Pi Gateway (python script)
 
-  Install python serial port and mySQL modules
+  Install python serial port module
 
-    $ sudo aptitude install python-serial python-mysqldb
+    $ sudo aptitude install python-serial
   
   Ensure the script is executable
     $ chmod 755 /var/www/emoncms/Modules/raspberrypi/rfm2pigateway.py
