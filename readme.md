@@ -73,6 +73,7 @@ To prolong the life of your SD Card turn off logging when its not needed by call
     $ sudo aptitude install python-serial
   
   Ensure the script is executable
+
     $ chmod 755 /var/www/emoncms/Modules/raspberrypi/rfm2pigateway.py
   
   Create groupe emoncms and make user pi part of it
