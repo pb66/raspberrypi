@@ -104,6 +104,6 @@ To prolong the life of your SD Card turn off logging when its not needed by call
   
   To view the log:
     
-    $ tail -f -n 20 /var/log/rfm2pigateway/rfm2pigateway.log  (Ctrl+C to cancel)
+    $ tail -F -n 20 /var/log/rfm2pigateway/rfm2pigateway.log  (Ctrl+C to cancel)
     
 
