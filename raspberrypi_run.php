@@ -38,12 +38,16 @@
   // 2) Database
   $mysqli = new mysqli($server,$username,$password,$database);
 
+  // $timestore_adminkey pulled in from settings.php by process_settings.php
+  require "../feed/timestore_class.php";
+  $timestore = new Timestore($timestore_adminkey);
+
   // 3) User sessions
   require("../user/user_model.php");
   $user = new User($mysqli,null);
 
   require "../feed/feed_model.php";
-  $feed = new Feed($mysqli);
+  $feed = new Feed($mysqli,$timestore);
 
   require "../input/input_model.php";
   $input = new Input($mysqli,$feed);
