@@ -17,41 +17,28 @@
   $fp = fopen("importlock", "w");
   if (! flock($fp, LOCK_EX | LOCK_NB)) { echo "Already running\n"; die; }
 
-  chdir(dirname(__FILE__));
-
-  class ProcessArg {
-    const VALUE = 0;
-    const INPUTID = 1;
-    const FEEDID = 2;
-    const NONE = 3;
-  }
-
-  class DataType {
-    const UNDEFINED = 0;
-    const REALTIME = 1;
-    const DAILY = 2;
-    const HISTOGRAM = 3;
-  }
+  $basedir = str_replace("/Modules/raspberrypi","",dirname(__FILE__));
+  chdir($basedir);
 
   // 1) Load settings and core scripts
-  require "../../process_settings.php";
+  require "process_settings.php";
   // 2) Database
   $mysqli = new mysqli($server,$username,$password,$database);
 
   // 3) User sessions
-  require("../user/user_model.php");
+  require("Modules/user/user_model.php");
   $user = new User($mysqli,null);
 
-  require "../feed/feed_model.php";
-  $feed = new Feed($mysqli);
+  require "Modules/feed/feed_model.php";
+  $feed = new Feed($mysqli,$timestore_adminkey);
 
-  require "../input/input_model.php";
+  require "Modules/input/input_model.php";
   $input = new Input($mysqli,$feed);
 
-  require "../input/process_model.php";
+  require "Modules/input/process_model.php";
   $process = new Process($mysqli,$input,$feed);
 
-  include "raspberrypi_model.php";
+  include "Modules/raspberrypi/raspberrypi_model.php";
   $raspberrypi = new RaspberryPI($mysqli);
 
   $raspberrypi->set_running();
