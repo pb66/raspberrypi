@@ -25,15 +25,18 @@
   // 2) Database
   $mysqli = new mysqli($server,$username,$password,$database);
 
+  $redis = new Redis();
+  $redis->connect("127.0.0.1");
+
   // 3) User sessions
   require("Modules/user/user_model.php");
-  $user = new User($mysqli,null);
+  $user = new User($mysqli,$redis,null);
 
   require "Modules/feed/feed_model.php";
-  $feed = new Feed($mysqli,$timestore_adminkey);
+  $feed = new Feed($mysqli,$redis,$timestore_adminkey);
 
   require "Modules/input/input_model.php";
-  $input = new Input($mysqli,$feed);
+  $input = new Input($mysqli,$redis,$feed);
 
   require "Modules/input/process_model.php";
   $process = new Process($mysqli,$input,$feed);
@@ -281,10 +284,12 @@
               $name = $nameid;
 
               if (!isset($dbinputs[$nodeid][$name])) {
-                $input->create_input($settings->userid, $nodeid, $name);
+                $inputid = $input->create_input($session['userid'], $nodeid, $name);
                 $dbinputs[$nodeid][$name] = true;
+                $dbinputs[$nodeid][$name] = array('id'=>$inputid);
+                $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
               } else { 
-                if ($dbinputs[$nodeid][$name]['record']) $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
+                $input->set_timevalue($dbinputs[$nodeid][$name]['id'],$time,$value);
                 if ($dbinputs[$nodeid][$name]['processList']) $tmp[] = array('value'=>$value,'processList'=>$dbinputs[$nodeid][$name]['processList']);
               }
 
