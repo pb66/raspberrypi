@@ -1,0 +1,6 @@
+*lock /var/www/emoncms/Modules/raspberrypi
+*.php /var/www/emoncms/Modules/raspberrypi
+*.js /var/www/emoncms/Modules/raspberrypi
+*.md /var/www/emoncms/Modules/raspberrypi
+rfm1* /var/www/emoncms/Modules/raspberrypi
+rfm2* /var/www/emoncms/Modules/raspberrypi
