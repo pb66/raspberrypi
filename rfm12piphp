@@ -32,7 +32,7 @@
 USER=root
 
 ## where rpi is located
-RPI_BIN="/var/www/emoncms/Modules/raspberrypi/raspberrypi_run.php"
+RPI_BIN="/usr/share/emoncms/www/Modules/raspberrypi/raspberrypi_run.php"
 RPI_SCRIPT="raspberrypi_run.php"
 
 ## where the binary is located
