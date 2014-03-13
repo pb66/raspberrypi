@@ -1,6 +1,7 @@
-emoncms-raspberrypi (1.0) unstable; urgency=low
+emoncms-module-rfm12pi (1.0) unstable; urgency=low
 
-  * Initial debian packaged release of emoncms-raspberrypi - previous versions not packaged but available through git.
+  * Initial debian packaged release of the "raspberrypi" module for emoncms
+  * Lives in https://github.com/emoncms/raspberrypi
 
  -- Dave McCraw <dave@mccraw.co.uk>  Thu, 06 Mar 2014 01:45:45 +0000
 
