@@ -1,3 +1,5 @@
-www/* /usr/share/emoncms/www/Modules/raspberrypi
+*.php /usr/share/emoncms/www/Modules/raspberrypi/
+*.js /usr/share/emoncms/www/Modules/raspberrypi/
+*lock /usr/share/emoncms/www/Modules/raspberrypi/
 rfm12piphp /etc/init.d/
-*.md /var/www/emoncms/Modules/raspberrypi
+*.md /usr/share/emoncms/www/Modules/raspberrypi/
