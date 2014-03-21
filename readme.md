@@ -32,15 +32,27 @@ automatically, and is therefore the recommended option if your system is compati
 Note that you will need to install emoncms itself via the Debian repository in order to 
 install modules in the same way.
 
-For the time being, you will still need to set up PEAR and install DIO from PECL; this is
-not available as a Debian package (but we may repackage it ourselves in future). 
+Note that we maintain our own package `php5-dio` which will be automatically installed;
+this should preclude you from having to use PEAR/PECL to install DIO. However, depending on your 
+architecture the `php5-dio package` may not be suitable. Please feel free to build dio on your own
+architecture and submit the deb to the package maintainer (dave@mccraw.co.uk) to resolve this.
 
     sudo apt-get update
     sudo apt-get install emoncms-module-rfm12pi
 
-Configuration is done via the emoncms web interface.
+Configuration is done via the emoncms web interface. The `php5-dio`
 
 ### Manual Linux installation
+
+Install serial PHP libraries
+
+    sudo apt-get install php-pear php5-dev
+    sudo pecl install channel://pecl.php.net/dio-0.0.6
+    sudo nano /etc/php5/cli/php.ini
+
+add extension=dio.so to file in the beginning of the ;Dynamic Extensions; section on line 843
+
+[Ctrl+X] then [y] then [Enter] to save and exit
 
 Clone the repository into the Modules/ directory of your emoncms installation.
 
