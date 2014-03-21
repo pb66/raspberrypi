@@ -7,7 +7,7 @@ Standards-Version: 3.9.2
 
 Package: emoncms-module-rfm12pi
 Architecture: any
-Depends: emoncms
+Depends: emoncms, php5-dio
 Breaks: emoncms-raspberrypi
 Description: The emoncms 'raspberrypi' module. See https://github.com/emoncms/raspberrypi
 
