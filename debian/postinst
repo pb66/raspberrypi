@@ -1,0 +1,33 @@
+#!/bin/sh
+
+# Automatically update the version number in raspberrypi_view.php to match 
+# the debian package number with an install route indicator
+VERSION=$(zless /usr/share/doc/$DPKG_MAINTSCRIPT_PACKAGE/changelog* \
+     | dpkg-parsechangelog -l- | awk '/Version/ { print $2 }')
+
+echo "Attempting to substitute in version ($VERSION) to raspberrypi_view.php..."
+
+# this is a teensy bit brittle, so we'll print a warning if it doesn't work
+sed -i "s/Module version: .*/Module version: $VERSION (debian)/g" /usr/share/emoncms/www/Modules/raspberrypi/raspberrypi_view.php
+
+if ! grep -q "$VERSION (debian)" /usr/share/emoncms/www/Modules/raspberrypi/raspberrypi_view.php ; then
+  echo " - WARNING: was not able to substitute version string into raspberrypi_view.php - has something changed?"
+else
+  echo " - Added successfully."
+fi
+
+echo "Setting permissions on rfm12piphp script:"
+chmod 755 /etc/init.d/rfm12piphp
+
+echo "Configuring system to load rfm12piphp script on boot:"
+update-rc.d rfm12piphp defaults
+
+echo "Attempting to (re)start the rfm12piphp script:"
+service rfm12piphp restart
+echo ""
+
+echo "Installation complete."
+echo " - this module's settings are configured directly through the 'Raspberry Pi' section of the emoncms web interface."
+echo " - you may wish to run the 'update & check database' tool, accessible via the 'Admin' section of the emoncms web interface."
+
+exit 0

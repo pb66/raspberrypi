@@ -16,7 +16,18 @@
 
 <script type="text/javascript" src="<?php echo $path; ?>Modules/raspberrypi/raspberrypi.js"></script>
 
-<br>
+
+<!-- Please preserve formatting (or edit debian/postinst to match). 
+  This helps the forum offer technical support... -->
+<div style="float:right; font-size:80%; font-style:italic">
+Module version: 1.0
+</div>
+
+
+<div style="clear:right; float:right;"><a href="api">RaspberryPi API Help</a></div>
+<br/>
+<h2>Raspberry Pi</h2>
+<h3>RFM12Pi interface</h3>
 
 <div id="running" class="alert alert-success hide">
   RFM12 to Pi interface script is up and running
@@ -25,8 +36,6 @@
 <div id="not-running"  class="alert alert-important hide">
   No data has been recieved from the RFM12Pi in the last 30s. Check if the Pi interface script is running, if not you may need to configure cron
 </div>
-<br><div style="float:right;"><a href="api">RaspberryPi API Help</a></div>
-<h2>Raspberry Pi</h2>
 
 <form id="testform">
   <div style="width:400px; float:left;">

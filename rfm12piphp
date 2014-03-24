@@ -32,7 +32,7 @@
 USER=root
 
 ## where rpi is located
-RPI_BIN="/var/www/emoncms/Modules/raspberrypi/raspberrypi_run.php"
+RPI_BIN="/usr/share/emoncms/www/Modules/raspberrypi/raspberrypi_run.php"
 RPI_SCRIPT="raspberrypi_run.php"
 
 ## where the binary is located
@@ -95,7 +95,7 @@ function do_start {
 function do_stop {
 	NB_PROCESS=`ps ax | grep $RPI_SCRIPT | grep -v grep | wc -l`
 	if [ $NB_PROCESS -gt 1 ]; then
-		echo "ERROR: multiple $RPI_SCRIP processes found, you'd better kill thoses processes by hand."
+		echo "ERROR: multiple $RPI_SCRIPT processes found, you'd better kill those processes by hand."
 	elif [ $NB_PROCESS -eq 1 ]; then
 		if [ -f $RPI_PID_FILE ]; then
 			PID=$(cat $RPI_PID_FILE)
@@ -108,7 +108,7 @@ function do_stop {
 			fi
 		fi
 	else
-		echo "WARNING: are you sure $RPI_SCRIPT is running ?"
+		echo " ($RPI_SCRIPT was not running...)"
 	fi
 }
 
