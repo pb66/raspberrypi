@@ -51,6 +51,9 @@
   include "Modules/raspberrypi/raspberrypi_model.php";
   $raspberrypi = new RaspberryPI($mysqli);
 
+  include "Modules/packetgen/packetgen_model.php";
+  $packetgen = new PacketGen($mysqli,$redis);
+  
   $raspberrypi->set_running();
 
   $settings = $raspberrypi->get();
@@ -84,6 +87,10 @@
     $filename = "dio.serial://dev/ttyAMA0";
   }
 
+  $controltime = time();
+  $controlinterval = 60;
+  $controlinterval = $packetgen->get_interval($session['userid']);
+  
   // Open the stream for read and write and use it.
   $f = fopen($filename, "r+", false, $c);
   stream_set_timeout($f, 0,1000);
@@ -112,6 +119,8 @@
 
         $settings = $raspberrypi->get();
         $session['userid'] = $settings->userid;
+        
+        $controlinterval = $packetgen->get_interval($session['userid']);
 
         if ($settings->sgroup !=$group) {
           $group = $settings->sgroup; 
@@ -326,7 +335,16 @@
         echo "00,$hour,$min,00s\n";
         usleep(100);
       }
-
+       
+      // RFM12Pi control packet broadcaster
+      if ($controlinterval>0 && (time()-$controltime) > $controlinterval)
+      {
+        $controltime = time();
+        $str = $packetgen->getrfm12packet($session['userid']);
+        fprintf($f,$str."s");
+        usleep(100);
+      }
+      
     }
   }
   fclose($f);
