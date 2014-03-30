@@ -51,6 +51,9 @@
   include "Modules/raspberrypi/raspberrypi_model.php";
   $raspberrypi = new RaspberryPI($mysqli);
 
+  include "Modules/packetgen/packetgen_model.php";
+  $packetgen = new PacketGen($mysqli,$redis);
+
   $raspberrypi->set_running();
 
   $settings = $raspberrypi->get();
@@ -83,6 +86,10 @@
   } else {
     $filename = "dio.serial://dev/ttyAMA0";
   }
+  
+  $controltime = time();
+  $controlinterval = 60;
+  $controlinterval = $packetgen->get_interval($session['userid']);
 
   // Open the stream for read and write and use it.
   $f = fopen($filename, "r+", false, $c);
@@ -112,6 +119,8 @@
 
         $settings = $raspberrypi->get();
         $session['userid'] = $settings->userid;
+        
+        $controlinterval = $packetgen->get_interval($session['userid']);
 
         if ($settings->sgroup !=$group) {
           $group = $settings->sgroup; 
@@ -314,7 +323,7 @@
           }
         }
       }
-
+      
       // Sends the time to any listening nodes, including EmonGLCD's
       if ($settings->sendtimeinterval!=0 &&
           time()-$glcdtime > $settings->sendtimeinterval)
@@ -326,7 +335,16 @@
         echo "00,$hour,$min,00s\n";
         usleep(100);
       }
-
+      
+      // RFM12Pi control packet broadcaster
+      if ($controlinterval>0 && (time()-$controltime) > $controlinterval)
+      {
+        $controltime = time();
+        $str = $packetgen->getrfm12packet($session['userid']);
+        fprintf($f,$str."s");
+        usleep(100);
+      }
+      
     }
   }
   fclose($f);
@@ -338,21 +356,21 @@ function getcontent($server, $port, $file)
    $fp = fsockopen($ip, $port);
    if (!$fp)
    {
-       return "Unknown";
+     return "Unknown";
    }
    else
    {
-       $com = "GET $file HTTP/1.1\r\nAccept: */*\r\nAccept-Language: de-ch\r\nAccept-Encoding: gzip, deflate\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)\r\nHost: $server:$port\r\nConnection: Keep-Alive\r\n\r\n";
-       fputs($fp, $com);
-/* Don't realy need to fetch output as it slows us down
-       while (!feof($fp))
-       {
-           $cont .= fread($fp, 500);
-       }
-*/
-       fclose($fp);
-//       $cont = substr($cont, strpos($cont, "\r\n\r\n") + 4);
-//       return $cont;
+     $com = "GET $file HTTP/1.1\r\nAccept: */*\r\nAccept-Language: de-ch\r\nAccept-Encoding: gzip, deflate\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)\r\nHost: $server:$port\r\nConnection: Keep-Alive\r\n\r\n";
+     fputs($fp, $com);
+     /* Don't really need to fetch output as it slows us down
+     while (!feof($fp))
+     {
+       $cont .= fread($fp, 500);
+     }
+     */
+     fclose($fp);
+     // $cont = substr($cont, strpos($cont, "\r\n\r\n") + 4);
+     // return $cont;
    }
 }
 ?>
